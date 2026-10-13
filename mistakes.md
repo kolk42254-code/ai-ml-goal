@@ -21,6 +21,8 @@ My mistake log. Every row below was graded or named in a past session with my co
 11. One object = one record: loop over the objects and read their attributes with a dot. No `zip`.
 12. Never assign the result of `.append()`, because it returns `None`. To change a class attribute, go through the class name: `Player.online.append(player)`.
 13. `*items` packs all the arguments into one tuple. Loop over it to add each item.
+14. Check both ends of an amount: block 0 and negatives, not only "too much". Test 0 and a negative.
+15. One list holds one kind of item. Each history entry says what happened: `"Deposited 1000"`, not `1000`.
 
 ## Log
 | Date | Where | Mistake | Why | Fix rule | Retested |
@@ -37,7 +39,10 @@ My mistake log. Every row below was graded or named in a past session with my co
 | 2 Oct | `resume.py` · line 57 | Wrote `edt`, but the variable was `Edt` → `NameError` | Python names are case-sensitive | Lowercase variable names only | Y |
 | 2 Oct | `resume.py` · `main()` | Merged the two name questions and kept the one without `.title()` | Deleting duplicate code can delete the better copy | Before deleting a copy, check what each copy did | N |
 | 6 Oct | P66 practice 2 | Used `zip()` on one book's attributes → `TypeError: 'int' object is not iterable` | Read `i.pages` as all the pages, but each loop pass gives one whole book | One object = one record: loop over the objects and read attributes with a dot | N |
-| 6 Oct | P66 practice 1–2 | Named the classes `bot` and `book`, not `Bot` and `Book` | Repeat of Day 0 Q2: names not copied from the spec | Copy names exactly from the spec | N (repeated with `cart` on 10 Oct) |
+| 6 Oct | P66 practice 1–2 | Named the classes `bot` and `book`, not `Bot` and `Book` | Repeat of Day 0 Q2: names not copied from the spec | Copy names exactly from the spec | Y (13 Oct); repeated with `cart` on 10 Oct |
 | 6 Oct | P66 practice 1–2 | Used the `>>>` shell, not `p66_practice.py` | Repeat of the Day 0 habit | Code goes in `.py` files | Y (10 Oct) |
 | 10 Oct | P67 practice · my Player | `self.online = self.online.append(player)` left every player's `online` as `None` | `append` returns `None`, and assigning through `self.` creates a new attribute on the object | Never assign the result of `.append()`; change a class attribute through the class name | N |
 | 10 Oct | P67 practice · my cart | Appended the whole `*items` tuple as one item | `*items` packs all the arguments into one tuple | Loop over `*items` to add each one, and check with `len()` | N |
+| 13 Oct | P68 practice · `withdraw` | No check for 0 or negative amounts, so `withdraw(-500)` added 500 to the balance | `-500 > 1000` is `False`, so the only check passed, and `balance -= -500` adds 500 | Check both ends of an amount: block 0 and negatives, not only "too much" | N |
+| 13 Oct | P68 practice · `history` | Saved deposits as bare numbers (`1000`) and withdrawals as sentences | A bare number doesn't say if money came in or went out, and mixed types make the list hard to use later | One list holds one kind of item; each history entry says what happened | N |
+| 13 Oct | P68 practice · `Bankaccount` | Tested only `deposit(1000)` and `withdraw(500)`: no 0, negative or too-big amounts | Repeat of 25 Sep Day 0 Q3 (but `best_lap()` on an empty bot was tested this time) | Test the normal case and the edge case every time | N |
