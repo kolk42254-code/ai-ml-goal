@@ -43,7 +43,7 @@ class Bankaccount:
     def deposit(self, amount):
         if amount > 10:
             self.balance += amount
-            self.history.append(amount)
+            self.history.append("Deposit" + str(amount))
             print("Amount added successfully")
             return
         else:
@@ -57,7 +57,6 @@ class Bankaccount:
             print("Not enough fund in your account")
             return
         self.balance-= amount
-        self.history.append("deopsit " + str(amount))
         self.history.append("Withdrawnn amount " + str(amount))
     def show(self):
         print(f"{self.owner} has {self.balance}$")
@@ -69,3 +68,4 @@ a = Bankaccount("Lohi")
 a.deposit(1000)
 a.withdraw(500)
 a.show()
+
