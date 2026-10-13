@@ -43,7 +43,7 @@ class Bankaccount:
     def deposit(self, amount):
         if amount > 10:
             self.balance += amount
-            self.history.append("Deposit" + str(amount))
+            self.history.append("Deposit " + str(amount))
             print("Amount added successfully")
             return
         else:
@@ -67,5 +67,7 @@ class Bankaccount:
 a = Bankaccount("Lohi")
 a.deposit(1000)
 a.withdraw(500)
+a.withdraw(0)
+a.withdraw(-500)
 a.show()
 

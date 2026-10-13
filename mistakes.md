@@ -23,6 +23,8 @@ My mistake log. Every row below was graded or named in a past session with my co
 13. `*items` packs all the arguments into one tuple. Loop over it to add each item.
 14. Check both ends of an amount: block 0 and negatives, not only "too much". Test 0 and a negative.
 15. One list holds one kind of item. Each history entry says what happened: `"Deposited 1000"`, not `1000`.
+16. After a fix, run the file and check each output line against what really happened.
+17. `+` joins strings with nothing in between. Put the space inside the quotes: `"Deposit " + str(amount)`.
 
 ## Log
 | Date | Where | Mistake | Why | Fix rule | Retested |
@@ -46,3 +48,6 @@ My mistake log. Every row below was graded or named in a past session with my co
 | 13 Oct | P68 practice · `withdraw` | No check for 0 or negative amounts, so `withdraw(-500)` added 500 to the balance | `-500 > 1000` is `False`, so the only check passed, and `balance -= -500` adds 500 | Check both ends of an amount: block 0 and negatives, not only "too much" | N |
 | 13 Oct | P68 practice · `history` | Saved deposits as bare numbers (`1000`) and withdrawals as sentences | A bare number doesn't say if money came in or went out, and mixed types make the list hard to use later | One list holds one kind of item; each history entry says what happened | N |
 | 13 Oct | P68 practice · `Bankaccount` | Tested only `deposit(1000)` and `withdraw(500)`: no 0, negative or too-big amounts | Repeat of 25 Sep Day 0 Q3 (but `best_lap()` on an empty bot was tested this time) | Test the normal case and the edge case every time | N |
+| 13 Oct | P68 fix 1 · `withdraw` | Put the deposit history line inside `withdraw`, so every withdrawal was also saved as a deposit (`deopsit 500`) | A line runs in the method it sits in, so the deposit line ran on every withdrawal | After a fix, run the file and check each output line against what really happened | N |
+| 13 Oct | P68 fix 2 · `deposit` | `"Deposit" + str(amount)` printed `Deposit1000`, with no space | `+` joins strings exactly as they are and never adds a space (`print(a, b)` does) | Put the space inside the quotes: `"Deposit " + str(amount)` | N |
+| 13 Oct | P68 fix 2 | Did 2 of the 3 fix steps: no `withdraw(0)` or `withdraw(-500)` test, but the commit message says "test withdraw" | Repeat of 26 Sep `variance.py`: didn't tick off the task list before sending | Tick off every item the task asks for before committing; the commit message must match what's in the file | N |
