@@ -8,7 +8,7 @@ My mistake log. Every row below was graded or named in a past session with my co
 3. When I get the same thing right later in a test or practice, change Retested to Y and add the date.
 
 ## Fix rules (read these before every test)
-1. Copy names exactly from the task. Class names start with a capital letter (`Bot`, `Book`, `Cart`).
+1. Copy names exactly from the task. Class names start with a capital letter and capitalise every word (`Bot`, `Book`, `BankAccount`, `TodoList`).
 2. Test the normal case and the edge case (like an empty list) every time.
 3. Code goes in `.py` files, not the `>>>` shell.
 4. `print(a, b)` separates values with a space, not a comma.
@@ -25,12 +25,20 @@ My mistake log. Every row below was graded or named in a past session with my co
 15. One list holds one kind of item. Each history entry says what happened: `"Deposited 1000"`, not `1000`.
 16. After a fix, run the file and check each output line against what really happened.
 17. `+` joins strings with nothing in between. Put the space inside the quotes: `"Deposit " + str(amount)`.
+18. Read every printed message for spelling before committing.
+19. Write `return` only to send back a value or to stop early. A `return` on the last line of a function does nothing.
+20. One blank line between methods.
+21. File names are lowercase with underscores and no spaces: `p68_practice.py`.
+22. A commit message says what changed and matches what's in the commit: `P68: fix history text`, not `p68` or `todo.py`.
+23. Before running a copied command, replace its placeholder text (`Your Name`, `your-key-here`) with my real values.
+24. An edge-case branch prints something I can see (`No tasks yet`), so the output proves the test ran.
+25. Check dunder names: 2 underscores on each side (`__init__`, `__str__`).
 
 ## Log
 | Date | Where | Mistake | Why | Fix rule | Retested |
 |---|---|---|---|---|---|
 | 25 Sep | Day 0 · Q2 | Named the function `count_vowel`, not `count_vowels` | Didn't copy the name from the task | Copy names exactly from the spec | N |
-| 25 Sep | Day 0 · Q3 | Didn't run `average([])` | Only tested the normal case | Test the normal case and the edge case every time | N |
+| 25 Sep | Day 0 · Q3 | Didn't run `average([])` | Only tested the normal case | Test the normal case and the edge case every time | Y (13 Oct, `todo.py`: tested an empty list unprompted) |
 | 25 Sep | Day 0 · Q2–Q3 | Wrote functions in the `>>>` shell | Habit | Functions go in `.py` files | Y (10 Oct) |
 | 25 Sep | Warm-up · Q2 | Wrote `3.0, 0.0` for `print(m, total)` | Assumed `print` adds commas | `print(a, b)` separates values with a space | N |
 | 25 Sep | Warm-up · Q1 | Computed the mean inside the loop | Didn't think about when the line runs | Totals inside the loop, final result after it | N |
@@ -51,3 +59,19 @@ My mistake log. Every row below was graded or named in a past session with my co
 | 13 Oct | P68 fix 1 · `withdraw` | Put the deposit history line inside `withdraw`, so every withdrawal was also saved as a deposit (`deopsit 500`) | A line runs in the method it sits in, so the deposit line ran on every withdrawal | After a fix, run the file and check each output line against what really happened | N |
 | 13 Oct | P68 fix 2 · `deposit` | `"Deposit" + str(amount)` printed `Deposit1000`, with no space | `+` joins strings exactly as they are and never adds a space (`print(a, b)` does) | Put the space inside the quotes: `"Deposit " + str(amount)` | N |
 | 13 Oct | P68 fix 2 | Did 2 of the 3 fix steps: no `withdraw(0)` or `withdraw(-500)` test, but the commit message says "test withdraw" | Repeat of 26 Sep `variance.py`: didn't tick off the task list before sending | Tick off every item the task asks for before committing; the commit message must match what's in the file | N |
+| 13 Oct | P68 practice · messages | Typos in printed text: `greater then 10`, `Withdrawnn amount` | Printed text is part of the output; both typos are still in the file | Read every printed message for spelling before committing (rule 18) | N |
+| 13 Oct | P68 practice · `deposit` | Wrote a `return` at the end of both the `if` branch and the `else` branch | The method ends there anyway, so both `return`s do nothing | Write `return` only to send back a value or to stop early (rule 19) | N |
+| 13 Oct | P68 practice · layout | No blank line between `deposit`, `withdraw` and `show` | The methods run into each other, so it's hard to see where one ends | One blank line between methods (rule 20) | N |
+| 13 Oct | P68 practice · file name | Named the file `P68 practice.py`, with a space | The `import` statement can't name a file with a space (needed from P78), and every terminal command needs quotes | Lowercase with underscores: `p68_practice.py` (rule 21) | N |
+| 13 Oct | P68 practice · `Bankaccount` | Named the class `Bankaccount`, not `BankAccount` | Class names capitalise every word, not only the first | Capitalise every word in a class name (rule 1) | N |
+| 13 Oct | P68 · commits | Commit messages `p68` and `mistakes log and P68 files`, but the P68 file wasn't in the second commit | A commit message is the record of what changed; one says nothing, and the other names a file that isn't in it | The message says what changed and matches the commit (rule 22) | N |
+| 13 Oct | Git setup | Git name and email were tutorial placeholders: `Your Name` and `the email of your GitHub account` | Placeholder text was run as if it were real, so GitHub couldn't link my first 2 commits to my account | Replace placeholder text before running a copied command (rule 23) | N |
+| 13 Oct | `todo.py` · commit | Commit message `todo.py` is only the file name | Repeat of the `p68` commit message from earlier the same day | The message says what changed: `Add TodoList with add, done and show` (rule 22) | N |
+| 13 Oct | `todo.py` · `show()` | The empty-list check does `return None`, so `e.show()` prints nothing | Without the check, the empty loop also prints nothing and `show` also returns `None`, so the check changes nothing and the output can't show the test ran | An edge-case branch prints something I can see: `No tasks yet` (rule 24) | N |
+| 13 Oct | `todo.py` · layout | No blank line between `__init__`, `add` and `done` | Repeat of P68 from the same day | One blank line between methods (rule 20) | N |
+| 13 Oct | C lab · commits | `removed c1.c` was really a rename to `dublicate.c`; `area and volume of circle` computes a sphere (a circle has no volume) | Repeat of the P68 and `todo.py` commits: the message doesn't match the commit | The message says what changed and matches the commit (rule 22) | N |
+| 13 Oct | C lab · `dublicate.c` | The arrays hold 50 numbers, but `n` is never checked: entering 60 numbers crashed with a segmentation fault | Numbers 51–60 are written past the end of the arrays, into memory they don't own | Check both ends of an amount: stop if `n` is below 1 or above 50 (rule 14) | N |
+| 13 Oct | C lab · `area.c` | No check on the radius: `r = -2` printed a volume of `-33.493332` | `r*r` hides the minus sign, so the area looks fine, but `r*r*r` keeps it, so the volume goes negative | Check both ends of an amount: reject a negative radius; test 0 and a negative (rule 14) | N |
+| 16 Oct | Diamond practice | Wrote `def __init(self)`, so `Base` never printed | Python only runs `__init__` automatically, with `__` on both sides | Check dunder names: 2 underscores on each side (rule 25) | N |
+| 18 Oct 2026 | M7 in C, stat.c | One value printed -nan | Dividing a double by 0 in C gives nan, with no error | Check len < 2 before dividing by n − 1 | No |
+| 18 Oct 2026 | M7 in C, stat.c | More than 20 values overflowed data[20] | C doesn’t check array limits | Always check the size against the array length | No |
