@@ -21,7 +21,7 @@ My mistake log. Every row below was graded or named in a past session with my co
 11. One object = one record: loop over the objects and read their attributes with a dot. No `zip`.
 12. Never assign the result of `.append()`, because it returns `None`. To change a class attribute, go through the class name: `Player.online.append(player)`.
 13. `*items` packs all the arguments into one tuple. Loop over it to add each item.
-14. Check both ends of an amount: block 0 and negatives, not only "too much". Test 0 and a negative.
+14. Check both ends of an amount or size: block 0, negatives and too-big values (like more values than an array holds). Test 0, a negative and a too-big value.
 15. One list holds one kind of item. Each history entry says what happened: `"Deposited 1000"`, not `1000`.
 16. After a fix, run the file and check each output line against what really happened.
 17. `+` joins strings with nothing in between. Put the space inside the quotes: `"Deposit " + str(amount)`.
@@ -33,6 +33,9 @@ My mistake log. Every row below was graded or named in a past session with my co
 23. Before running a copied command, replace its placeholder text (`Your Name`, `your-key-here`) with my real values.
 24. An edge-case branch prints something I can see (`No tasks yet`), so the output proves the test ran.
 25. Check dunder names: 2 underscores on each side (`__init__`, `__str__`).
+26. The last step of the std is the square root: `std = variance ** 0.5`.
+27. Whole group: divide by n. Sample: divide by n − 1, which needs at least 2 values.
+28. Return numbers, not text: `0`, not `"0"`.
 
 ## Log
 | Date | Where | Mistake | Why | Fix rule | Retested |
@@ -41,7 +44,7 @@ My mistake log. Every row below was graded or named in a past session with my co
 | 25 Sep | Day 0 · Q3 | Didn't run `average([])` | Only tested the normal case | Test the normal case and the edge case every time | Y (13 Oct, `todo.py`: tested an empty list unprompted) |
 | 25 Sep | Day 0 · Q2–Q3 | Wrote functions in the `>>>` shell | Habit | Functions go in `.py` files | Y (10 Oct) |
 | 25 Sep | Warm-up · Q2 | Wrote `3.0, 0.0` for `print(m, total)` | Assumed `print` adds commas | `print(a, b)` separates values with a space | N |
-| 25 Sep | Warm-up · Q1 | Computed the mean inside the loop | Didn't think about when the line runs | Totals inside the loop, final result after it | N |
+| 25 Sep | Warm-up · Q1 | Computed the mean inside the loop | Didn't think about when the line runs | Totals inside the loop, final result after it | Y (18 Oct, `stat.c`: total inside the loop, mean after it) |
 | 25 Sep | Warm-up redo | Answered half of Q3, and used code when told to use pen and paper | Rushed; didn't re-read the question | Re-read the question and answer every part before sending | N |
 | 26 Sep | `variance.py` | Sent it without the output and the "why we square" answer | Didn't check the task list before sending | Before sending, tick off every item the task asks for | N |
 | 26 Sep | Loop lesson · Step 1 check (b) | Printed −2 for `range(7, 0, -3)` | Kept counting past the stop | `range` never crosses the stop; counting down, every number must be above it | Y |
@@ -73,5 +76,10 @@ My mistake log. Every row below was graded or named in a past session with my co
 | 13 Oct | C lab · `dublicate.c` | The arrays hold 50 numbers, but `n` is never checked: entering 60 numbers crashed with a segmentation fault | Numbers 51–60 are written past the end of the arrays, into memory they don't own | Check both ends of an amount: stop if `n` is below 1 or above 50 (rule 14) | N |
 | 13 Oct | C lab · `area.c` | No check on the radius: `r = -2` printed a volume of `-33.493332` | `r*r` hides the minus sign, so the area looks fine, but `r*r*r` keeps it, so the volume goes negative | Check both ends of an amount: reject a negative radius; test 0 and a negative (rule 14) | N |
 | 16 Oct | Diamond practice | Wrote `def __init(self)`, so `Base` never printed | Python only runs `__init__` automatically, with `__` on both sides | Check dunder names: 2 underscores on each side (rule 25) | N |
-| 18 Oct 2026 | M7 in C, stat.c | One value printed -nan | Dividing a double by 0 in C gives nan, with no error | Check len < 2 before dividing by n − 1 | No |
-| 18 Oct 2026 | M7 in C, stat.c | More than 20 values overflowed data[20] | C doesn’t check array limits | Always check the size against the array length | No |
+| 17 Oct | M6 practice · `std()` | Returned the variance (`12.0`), with no square root | Stopped one step before the end of the formula | The last step of the std is the square root (rule 26) | N |
+| 17 Oct | M6 practice · `std()` | Divided by `len(marks)-1`, so `std([7])` crashed with `ZeroDivisionError` | Mixed up M6 (divide by n) with M7 (divide by n − 1), and never tested a one-value list | Whole group: n. Sample: n − 1, with at least 2 values. Always test one value (rules 2, 27) | N |
+| 17 Oct | M6 practice · `std()` | Returned `"0"` for an empty list, so `std([]) * 2` gave `00` | Quotes make it text, and text × 2 repeats it | Return numbers, not text (rule 28) | N |
+| 17 Oct | M6 practice · `std()` | Wrote the function in the `>>>` shell | Repeat of 25 Sep and 6 Oct, after both were marked fixed on 10 Oct | Code goes in `.py` files (rule 3) | N |
+| 18 Oct | M7 in C · `stat.c` | One value printed `-nan` | Dividing a double by 0 in C gives `nan`, with no error | Check `len < 2` before dividing by n − 1; test one value (rules 14, 27) | N |
+| 18 Oct | M7 in C · `stat.c` | 25 values overflowed `data[20]`: `*** stack smashing detected ***` | Repeat of 13 Oct `dublicate.c`: C doesn't check array limits | Check the size against the array length: 2 to 20 here (rule 14) | N |
+| 18 Oct | M7 in C · `stat.c` | Printed text says `varience` | Repeat of the 13 Oct typos in printed messages | Read every printed message for spelling (rule 18) | N |
