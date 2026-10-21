@@ -1,0 +1,12 @@
+# secret keys
+.env
+# customer orders and phone numbers: private, never upload
+shop.db
+shop.db-wal
+shop.db-shm
+orders.csv
+uploads/
+# Python leftovers
+venv/
+__pycache__/
+.pytest_cache/

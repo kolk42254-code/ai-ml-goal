@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sweet Crumbs Bakery</title>
+  <meta name="description" content="Order fresh cakes, pastries and puffs, or ask our AI assistant in your language.">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/base.css?v=1">
+  <link rel="stylesheet" href="/static/shop.css?v=1">
+  <script src="/static/common.js?v=1" defer></script>
+  <script src="/static/shop.js?v=1" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">🧁</span><span id="shop-name">Sweet Crumbs Bakery</span></a>
+    <button class="cart-button" id="open-cart" type="button">
+      <span>Your order</span><span class="cart-count" id="cart-count">0</span>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main class="main-col" id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="status" id="status"><span class="status-dot" aria-hidden="true"></span><span id="status-text">Checking if we're open</span></p>
+        <h1 id="hero-title">What can we bake for you today?</h1>
+        <p class="tagline" id="tagline"></p>
+        <form class="ask" id="hero-ask">
+          <label class="visually-hidden" for="hero-input">Ask the shop assistant</label>
+          <input id="hero-input" maxlength="500" autocomplete="off" placeholder="Ask about a cake, a price or an order">
+          <button class="button" type="submit">Ask</button>
+        </form>
+        <div class="suggestions">
+          <button class="chip" type="button" data-ask="What's on offer today?">What's on offer today?</button>
+          <button class="chip" type="button" data-ask="Which cakes can be made eggless?">Eggless cakes</button>
+          <button class="chip" type="button" data-ask="I want to order a birthday cake">Order a birthday cake</button>
+        </div>
+      </section>
+
+      <section class="offers" id="offers" aria-labelledby="offers-title" hidden>
+        <h2 id="offers-title">On offer now</h2>
+        <div class="offer-rail" id="offer-rail"></div>
+      </section>
+
+      <section class="counter" aria-labelledby="counter-title">
+        <div class="counter-head">
+          <h2 id="counter-title">Today's counter</h2>
+          <label class="search">
+            <span class="visually-hidden">Search the counter</span>
+            <input type="search" id="search" class="input" placeholder="Search the counter" autocomplete="off">
+          </label>
+        </div>
+        <div class="categories" id="categories" role="group" aria-label="Show a category"></div>
+        <div id="shelf" class="shelf"><p class="loading">Setting out today's counter</p></div>
+      </section>
+
+      <footer class="shop-footer">
+        <div>
+          <h2 id="footer-name">Sweet Crumbs Bakery</h2>
+          <p id="footer-address"></p>
+          <p><a id="footer-phone" href="#">Call the shop</a></p>
+        </div>
+        <div>
+          <h3>Opening hours</h3>
+          <p id="footer-hours"></p>
+          <h3>Delivery</h3>
+          <p id="footer-delivery"></p>
+        </div>
+        <p class="owner-link"><a href="/owner">Shop owner sign-in</a></p>
+      </footer>
+    </main>
+
+    <aside class="assistant" id="assistant" aria-labelledby="assistant-title">
+      <div class="assistant-head">
+        <span class="assistant-face" aria-hidden="true">🧁</span>
+        <div>
+          <h2 id="assistant-title">Ask at the counter</h2>
+          <p>Our AI assistant replies in your language and can take your order.</p>
+        </div>
+        <button class="icon-button close-chat" id="close-chat" type="button" aria-label="Close chat">✕</button>
+      </div>
+      <ol class="messages" id="messages" aria-live="polite"></ol>
+      <form class="composer" id="composer">
+        <label class="visually-hidden" for="chat-input">Your message</label>
+        <input id="chat-input" class="input" maxlength="500" autocomplete="off" placeholder="Type your message">
+        <button class="button" type="submit" id="chat-send">Send</button>
+      </form>
+    </aside>
+  </div>
+
+  <div class="cart-bar" id="cart-bar" hidden>
+    <span id="cart-bar-text"></span>
+    <button class="button" type="button" id="cart-bar-open">View order</button>
+  </div>
+  <button class="chat-fab" id="chat-fab" type="button" aria-label="Chat with the shop assistant"><span aria-hidden="true">🧁</span> Ask</button>
+
+  <div class="backdrop" id="backdrop" hidden></div>
+  <section class="sheet" id="cart-sheet" role="dialog" aria-modal="true" aria-labelledby="cart-title" hidden>
+    <div class="sheet-head">
+      <h2 id="cart-title">Your order</h2>
+      <button class="icon-button" type="button" id="close-cart" aria-label="Close your order">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div id="cart-empty" class="cart-empty">
+        <p>Nothing here yet. Add something from the counter, or ask the assistant to order for you.</p>
+      </div>
+      <div id="cart-filled" hidden>
+        <ul class="cart-lines" id="cart-lines"></ul>
+        <form id="checkout" novalidate>
+          <fieldset class="choice">
+            <legend>How do you want it?</legend>
+            <label><input type="radio" name="fulfilment" value="pickup" checked><span>Pick up at the shop</span></label>
+            <label><input type="radio" name="fulfilment" value="delivery"><span>Home delivery</span></label>
+          </fieldset>
+          <p class="hint" id="delivery-hint"></p>
+          <label class="field" id="address-field" hidden>
+            <span>Delivery address</span>
+            <textarea name="address" maxlength="200" autocomplete="street-address"></textarea>
+          </label>
+          <label class="field">
+            <span>When do you want it?</span>
+            <input name="wanted_at" maxlength="60" placeholder="For example: today 6 PM">
+          </label>
+          <div class="two-fields">
+            <label class="field">
+              <span>Your name</span>
+              <input name="customer_name" maxlength="60" autocomplete="name">
+            </label>
+            <label class="field">
+              <span>Phone number</span>
+              <input name="phone" type="tel" maxlength="20" autocomplete="tel" inputmode="tel">
+            </label>
+          </div>
+          <label class="field">
+            <span>Notes for the shop (optional)</span>
+            <input name="notes" maxlength="300" placeholder="Eggless, or the message for the cake">
+          </label>
+          <dl class="totals" id="totals"></dl>
+          <p class="notice" id="checkout-error" role="alert" hidden></p>
+          <button class="button place-order" type="submit" id="place-order">Place order</button>
+          <p class="pay-note">You pay when you pick up or receive your order.</p>
+        </form>
+      </div>
+      <div id="receipt" hidden></div>
+    </div>
+  </section>
+</body>
+</html>

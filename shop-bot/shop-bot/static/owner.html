@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Owner desk</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/base.css?v=1">
+  <link rel="stylesheet" href="/static/owner.css?v=1">
+  <script src="/static/common.js?v=1" defer></script>
+  <script src="/static/owner.js?v=1" defer></script>
+</head>
+<body>
+  <header class="desk-top">
+    <span class="desk-brand"><span aria-hidden="true">🧁</span> <span id="desk-shop-name">Owner desk</span></span>
+    <nav class="desk-links">
+      <a href="/" target="_blank" rel="noopener">View shop</a>
+      <button class="button button-quiet button-small" id="sign-out" type="button" hidden>Sign out</button>
+    </nav>
+  </header>
+
+  <main id="sign-in-view" class="sign-in" hidden>
+    <form class="sign-in-card" id="sign-in-form">
+      <h1>Owner sign-in</h1>
+      <p>Sign in to see orders and change your items, prices and offers.</p>
+      <p class="notice" id="no-password" hidden>Owner sign-in is off. Add a line like <code>OWNER_PASSWORD=your-password</code> to the <code>.env</code> file, then restart the server.</p>
+      <label class="field">
+        <span>Password</span>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="notice" id="sign-in-error" role="alert" hidden></p>
+      <button class="button" type="submit">Sign in</button>
+    </form>
+  </main>
+
+  <main id="desk" class="desk" hidden>
+    <p class="today" id="today-line" aria-live="polite"></p>
+
+    <div class="tabs" role="tablist" aria-label="Owner sections">
+      <button role="tab" id="tab-orders" aria-controls="panel-orders" aria-selected="true" type="button">Orders <span class="badge" id="new-badge" hidden></span></button>
+      <button role="tab" id="tab-items" aria-controls="panel-items" aria-selected="false" type="button" tabindex="-1">Items</button>
+      <button role="tab" id="tab-shop" aria-controls="panel-shop" aria-selected="false" type="button" tabindex="-1">Shop details</button>
+    </div>
+
+    <section id="panel-orders" role="tabpanel" aria-labelledby="tab-orders">
+      <div class="panel-bar">
+        <div class="segmented" role="group" aria-label="Which orders">
+          <button type="button" data-view="waiting" aria-pressed="true">Waiting</button>
+          <button type="button" data-view="completed" aria-pressed="false">Completed</button>
+          <button type="button" data-view="cancelled" aria-pressed="false">Cancelled</button>
+        </div>
+        <button class="button button-quiet button-small" id="sound-toggle" type="button" aria-pressed="false">Turn on new-order sound</button>
+      </div>
+      <div id="orders-view"></div>
+    </section>
+
+    <section id="panel-items" role="tabpanel" aria-labelledby="tab-items" hidden>
+      <div class="panel-bar">
+        <p class="panel-help">Changes show in the shop within 20 seconds.</p>
+        <button class="button" id="show-add-item" type="button">Add an item</button>
+      </div>
+      <form class="add-item" id="add-item" hidden>
+        <h2>New item</h2>
+        <div class="add-grid">
+          <label class="field"><span>Name</span><input name="name" maxlength="60" required></label>
+          <label class="field"><span>Category</span><input name="category" maxlength="30" list="category-list" required></label>
+          <label class="field wide"><span>Short description</span><input name="description" maxlength="160" placeholder="For example: 1 kg, eggless on request"></label>
+          <label class="field"><span>Price (₹)</span><input name="price" type="number" min="1" step="1" required></label>
+          <label class="field"><span>Stock</span><input name="stock" type="number" min="0" step="1" value="10" required></label>
+          <fieldset class="field wide emoji-pick">
+            <legend>Picture (until you add a photo)</legend>
+            <div class="emoji-row" id="emoji-row"></div>
+          </fieldset>
+        </div>
+        <p class="notice" id="add-error" role="alert" hidden></p>
+        <div class="form-actions">
+          <button class="button" type="submit">Add item</button>
+          <button class="button button-quiet" type="button" id="cancel-add">Cancel</button>
+        </div>
+      </form>
+      <datalist id="category-list"></datalist>
+      <div id="items-list" class="items-list"></div>
+    </section>
+
+    <section id="panel-shop" role="tabpanel" aria-labelledby="tab-shop" hidden>
+      <form id="shop-form" class="shop-form">
+        <div class="shop-grid">
+          <label class="field"><span>Shop name</span><input name="shop_name" maxlength="60" required></label>
+          <label class="field"><span>Phone</span><input name="phone" maxlength="20" required></label>
+          <label class="field wide"><span>One-line welcome</span><input name="tagline" maxlength="120"></label>
+          <label class="field wide"><span>Address</span><input name="address" maxlength="160" required></label>
+          <label class="field"><span>Opens at</span><input name="open_time" type="time" required></label>
+          <label class="field"><span>Closes at</span><input name="close_time" type="time" required></label>
+          <fieldset class="field wide days">
+            <legend>Closed on</legend>
+            <div class="day-row" id="day-row"></div>
+          </fieldset>
+          <label class="field"><span>Delivery fee (₹)</span><input name="delivery_fee" type="number" min="0" step="1" required></label>
+          <label class="field"><span>Free delivery from (₹)</span><input name="free_delivery_above" type="number" min="0" step="1" required></label>
+          <label class="field wide"><span>Delivery area and times</span><input name="delivery_area" maxlength="200"></label>
+          <label class="field wide"><span>Notes for the AI assistant</span>
+            <textarea name="assistant_notes" maxlength="1500" rows="5" placeholder="Anything customers often ask: eggless, custom cakes, payment, parking"></textarea>
+          </label>
+        </div>
+        <p class="notice" id="shop-error" role="alert" hidden></p>
+        <button class="button" type="submit">Save shop details</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

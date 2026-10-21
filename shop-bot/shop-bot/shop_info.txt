@@ -1,0 +1,34 @@
+=== SAMPLE SHOP FOR THIS DEMO (made-up details - replace them with a real shop's details) ===
+
+Shop name: Sweet Crumbs Bakery
+About: A family bakery selling fresh cakes, pastries, cookies and snacks. Every cake can be made eggless.
+Address: 12 Market Road, near the City Bus Stand
+Phone: +91 90000 00000
+Open: 9:00 AM to 9:00 PM on Monday, Wednesday, Thursday, Friday, Saturday and Sunday. Closed on Tuesday only.
+
+CAKES (price for 1/2 kg / 1 kg)
+- Black Forest: ₹450 / ₹850
+- Chocolate Truffle: ₹500 / ₹950
+- Pineapple: ₹400 / ₹750
+- Butterscotch: ₹420 / ₹800
+- Red Velvet: ₹550 / ₹1,050
+- Eggless version of any cake: ₹50 extra
+- Name or message on the cake: free (up to 20 letters)
+
+PASTRIES AND SNACKS
+- Chocolate pastry: ₹70 each
+- Pineapple pastry: ₹60 each
+- Veg puff: ₹25 each
+- Paneer puff: ₹35 each
+- Butter cookies box (250 g): ₹180
+
+ORDERS
+- Normal cakes: order before 6:00 PM for pickup or delivery the next day.
+- Photo cakes and theme cakes: order 2 days before. 50% advance payment by UPI.
+- Same-day orders: only from cakes already in the shop, so ask the customer to call the shop.
+
+DELIVERY
+- Free home delivery within 3 km for orders of ₹500 or more. Otherwise ₹40.
+- Delivery time: 11:00 AM to 8:00 PM.
+
+PAYMENT: UPI, cash or card.
