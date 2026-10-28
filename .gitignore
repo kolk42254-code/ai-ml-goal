@@ -1,0 +1,28 @@
+# Files Git should never upload.
+
+# Secret keys (API keys, passwords) - never upload these
+.env
+.env.*
+!.env.example
+
+# Databases with private data (orders, phone numbers)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+
+# Python leftovers
+__pycache__/
+*.pyc
+venv/
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# JavaScript leftovers
+node_modules/
+
+# Windows junk
+Thumbs.db
+desktop.ini
+*.lnk
