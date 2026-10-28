@@ -7,12 +7,18 @@ My journey learning **Python, AI and Machine Learning**: practice programs, smal
 | File / folder | What it is |
 |---|---|
 | [mistakes.md](mistakes.md) | My mistakes log: fix rules I read before every test, and every mistake with its fix |
-| [P68 practice.py](P68%20practice.py) | OOP practice: a `Bot` class (lap times, total, best lap) and a bank account class (deposit, withdraw, history) |
+| [p68_practice.py](p68_practice.py) | OOP practice: a `Bot` class (lap times, total, best lap) and a bank account class (deposit, withdraw, history) |
 | [todo.py](todo.py) | OOP practice: a `TodoList` class (add, mark done, show) |
-| [Eye_blink.py](Eye_blink.py), [Eye_with_heart.py](Eye_with_heart.py) | Eye animations that play in the terminal |
-| [eye_to_space2.py](eye_to_space2.py) | Eye-to-space ASCII-art animation that opens in its own window |
-| [shop-bot](shop-bot/shop-bot) | **Sweet Crumbs**, an AI shop website: customers order with a cart or by chatting with a Gemini AI assistant, and the owner manages orders on a password-protected page |
-| Projects_by_AI.zip | Projects made with AI tools: Wizard Chess 3D, the eye animations with a menu, and an older shop-bot |
+| [shop-bot](shop-bot) | **Sweet Crumbs**, an AI shop website: customers order with a cart or by chatting with a Gemini AI assistant, and the owner manages orders on a password-protected page |
+| [Projects_by_AI](Projects_by_AI) | Projects made with AI tools (see below) |
+
+### Projects_by_AI
+
+| Folder | What it is |
+|---|---|
+| [Eye_animation](Projects_by_AI/Eye_animation) | Eye animations with a menu (`Eye_animation.py`): eye with heart, eye blinking, and eye-to-space ASCII art |
+| [wizard-chess-3d](Projects_by_AI/wizard-chess-3d) | Wizard Chess 3D: a 3D chess game in the browser with a computer opponent (made in Google AI Studio) |
+| [shop-bot-old](Projects_by_AI/shop-bot-old) | An older version of the shop bot, kept for reference |
 
 ## How to run
 
@@ -20,14 +26,16 @@ You need Python 3.
 
 ```bash
 python todo.py
-python "P68 practice.py"
+python p68_practice.py
 ```
 
-The eye animations need numpy, and `eye_to_space2.py` also needs Pillow:
+Eye animations (they need numpy and Pillow):
 
 ```bash
 pip install numpy pillow
-python Eye_blink.py
+python Projects_by_AI/Eye_animation/Eye_animation.py
 ```
 
-For the shop website, follow its own guide: [shop-bot/shop-bot/README.md](shop-bot/shop-bot/README.md).
+Shop website: follow [shop-bot/README.md](shop-bot/README.md).
+
+Wizard Chess 3D: follow [its README](Projects_by_AI/wizard-chess-3d/README.md) (it needs Node.js).

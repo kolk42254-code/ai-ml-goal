@@ -1,0 +1,10 @@
+# Tested on 21 Oct 2026 with these versions (Python 3.10 or newer is needed)
+fastapi>=0.156,<1
+uvicorn>=0.54
+requests>=2.34
+google-genai>=2.31,<3
+python-dotenv>=1.2
+
+# Only for the automatic tests
+pytest>=9.1
+httpx>=0.28
