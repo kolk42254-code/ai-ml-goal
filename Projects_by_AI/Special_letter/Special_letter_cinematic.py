@@ -285,11 +285,17 @@ class Film:
         albedo = albedo * (1.0 - k) + INK * k
         glyph = np.where(inside & ~edge & (cover > 0.2), self.pick("ink", cover), glyph)
 
-        # the wax seal: a shiny dome with a heart stamped into it
+        # the wax seal: a shiny heart-shaped dome with a heart stamped into it
         dx, dy = X - sx, Y - sy
         rho, ang = np.hypot(dx, dy), np.arctan2(dy, dx)
-        r_wax = 86.0 * (1.0 + 0.06 * np.sin(3 * ang + 1.3) + 0.04 * np.sin(5 * ang + 0.4)
-                        + 0.025 * np.sin(9 * ang + 2.0))
+        a = np.linspace(0.0, 2.0 * np.pi, 720, endpoint=False)          # the classic heart curve, in pixels
+        ex = 6.3 * 16.0 * np.sin(a) ** 3
+        ey = -6.3 * (13.0 * np.cos(a) - 5.0 * np.cos(2 * a) - 2.0 * np.cos(3 * a) - np.cos(4 * a)) - 20.0
+        ea = np.arctan2(ey, ex)
+        order = np.argsort(ea)
+        r_heart = np.interp(ang, ea[order], np.hypot(ex, ey)[order], period=2.0 * np.pi)   # edge distance per angle
+        r_wax = r_heart * (1.0 + 0.03 * np.sin(3 * ang + 1.3) + 0.02 * np.sin(5 * ang + 0.4)
+                           + 0.0125 * np.sin(9 * ang + 2.0))           # a slightly uneven wax edge
         wax = rho < r_wax
         nx, ny = dx / r_wax * 0.92, dy / r_wax * 0.92
         nz = np.sqrt(np.clip(1.0 - nx * nx - ny * ny, 0.03, 1.0))
