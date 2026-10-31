@@ -323,9 +323,8 @@ def rgb(r, g, b):
     return np.array([r, g, b], np.float32)
 
 
-PAPER, INK, CHAR, SCORCHED = rgb(0.90, 0.72, 0.60), rgb(0.42, 0.012, 0.040), rgb(0.050, 0.038, 0.032), rgb(0.20, 0.085, 0.03)
+PAPER, INK, CHAR, SCORCHED = rgb(0.84, 0.66, 0.46), rgb(0.42, 0.012, 0.040), rgb(0.050, 0.038, 0.032), rgb(0.20, 0.085, 0.03)
 WAX_BASE, WAX_SHINE = rgb(0.62, 0.018, 0.045), rgb(1.0, 0.80, 0.80)
-AIR_RED, AIR_BLUE = rgb(0.85, 0.040, 0.050), rgb(0.050, 0.11, 0.60)
 WOOD, MATCH_HEAD, THORN = rgb(1.0, 0.66, 0.28), rgb(0.40, 0.035, 0.025), rgb(0.30, 0.07, 0.03)
 STAR, SMOKE, WHITE = rgb(0.70, 0.78, 1.00), rgb(0.060, 0.055, 0.052), rgb(1.0, 0.86, 0.78)
 AMBIENT, FIRE_TINT, FLAME_TINT = rgb(0.92, 0.90, 0.96), rgb(1.0, 0.42, 0.10), rgb(1.0, 0.55, 0.18)
@@ -395,7 +394,7 @@ class Film:
         x0, y0, x1, y1 = ENV
         sx, sy = SEAL
         inside = (X > x0) & (X < x1) & (Y > y0) & (Y < y1)
-        edge = inside & ((X - x0 < 2 * CW) | (x1 - X < 2 * CW) | (Y - y0 < CH) | (y1 - Y < CH))
+        edge = inside & ((X - x0 < CW) | (x1 - X < CW) | (Y - y0 < CH) | (y1 - Y < CH))   # the outer rim of the paper
 
         # four flaps folded over the back, worked out for every pixel and then averaged into the cells
         box = cell_box(x0, y0, x1, y1)
@@ -423,18 +422,17 @@ class Film:
         light *= 1.0 + 0.035 * fine + 0.03 * broad                              # paper fibres and soft waves
         light *= 1.0 - 0.08 * ((X - sx) / 470.0) ** 2 - 0.05 * ((Y - 1010.0) / 320.0) ** 2
         glyph = self.pick("paper", 0.55 + 0.35 * fine + 0.9 * (light - 0.9))
-        # the flap edges are drawn as fine lines: - _ ' . chosen by where the edge crosses each cell
-        for cut, tip, corner in ((cut_t, top_tip, y0), (cut_b, bot_tip, y1)):
-            on = inside & ~edge & (cut > 0.04) & (cut < 0.96)
-            ey = tip + (corner - tip) * np.abs(X - sx) / (sx - x0)              # where the edge is in this column
-            glyph = np.where(on, self.line_at(ey - (Y - CH / 2.0), np.where(X < sx, 1.0, -1.0) * (corner - tip) / (sx - x0)), glyph)
+        # the flap edges: thin, soft shadow lines where one flap lies over another, like on a real envelope
+        crease = np.zeros((ROWS, COLS), np.float32)
+        for cut in (cut_t, cut_b):
+            crease = np.maximum(crease, np.clip(1.0 - np.abs(cut - 0.5) * 2.0, 0.0, 1.0) * (cut > 0.03) * (cut < 0.97))
+        light = light * (1.0 - 0.72 * crease * (inside & ~edge))
         albedo = PAPER * light[..., None]
 
-        # red and blue airmail stripes round the edge, slanted like real ones
-        phase = np.floor((X + Y) / 23.0).astype(np.int32) % 4
-        stripes = np.where((phase == 0)[..., None], AIR_RED, np.where((phase == 2)[..., None], AIR_BLUE, PAPER * 1.05))
-        albedo = np.where(edge[..., None], stripes * (0.92 + 0.08 * light[..., None]), albedo)
-        glyph = np.where(edge, np.where(phase % 2 == 0, self.gi["/"], self.pick("paper", 0.6 + 0.3 * fine)), glyph)
+        # the outer edge of the paper: a fine rim, lit along the top and a little darker elsewhere
+        rim = np.where(Y - y0 < CH, 1.05, 0.86)
+        albedo = np.where(edge[..., None], albedo * rim[..., None], albedo)
+        glyph = np.where(edge, self.pick("paper", 0.75 + 0.2 * fine), glyph)
 
         # the handwritten message: ink soaks into the paper and darkens it
         cover = text_coverage(self.message)
