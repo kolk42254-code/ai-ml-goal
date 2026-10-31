@@ -83,7 +83,7 @@ THORNS = ((0.30, 1), (0.42, -1), (0.57, 1), (0.70, -1), (0.84, 1))     # place a
 GLYPHS = "".join(chr(i) for i in range(32, 127)) + "\u2022\u00b7"     # ASCII, bullet, middle dot
 PALETTES = {  # characters for each material (sorted by ink later, so the order here does not matter)
     "paper": "#8@", "ink": "*%&#@", "wax": ".:oO0@", "fire": ".':;~+*%#@", "smoke": ".,:;~",
-    "ember": "*%#@", "petal": ":;+*%&8#@", "leaf": ":;+*%&#", "flame": ":+*#@", "flicker": "@#%&*+=",
+    "ember": "*%#@", "petal": "+*%&8#@", "leaf": ":;+*%&#", "flame": ":+*#@", "flicker": "@#%&*+=",
     "ash": ".,'`:;~"}
 
 # particles: one row per particle with these columns
@@ -292,9 +292,11 @@ def rose_head(b, n_th=1800, n_x=40, elev=0.62):
     lx, ly, lz = -0.45, -0.55, 0.70                                  # light from the upper left
     diffuse = np.clip(nx * lx + ny * ly + nz * lz, 0.0, 1.0)
     velvet = (1.0 - nz) ** 2.5                                       # petals seen edge-on look paler, like velvet
-    hidden = (0.30 + 0.70 * smoothstep(0.0, 0.85, XX)) * (1.0 - 0.45 * inner ** 1.5)   # deep inside is darker
-    shade = ((0.12 + 0.88 * diffuse) + 0.35 * velvet) * hidden * np.where(back, 0.85, 1.0)
+    hidden = (0.60 + 0.40 * smoothstep(0.0, 0.85, XX)) * (1.0 - 0.12 * inner ** 1.5)   # deep inside is a little darker
     petal = np.floor(3.6 * TH / (2.0 * np.pi))
+    lip = smoothstep(0.80, 1.0, XX)                                  # the curled edge of every petal catches the light
+    tone = 1.0 + 0.10 * np.sin(petal * 2.39)                         # each petal a slightly different red
+    shade = ((0.14 + 0.72 * diffuse) + 0.22 * velvet + 0.42 * lip) * hidden * tone * np.where(back, 0.85, 1.0)
     return sx.ravel(), sy.ravel(), near.ravel(), shade.ravel(), petal.ravel()
 
 
@@ -335,8 +337,8 @@ FIRE = Gradient((0.00, (0, 0, 0)), (0.10, (0.07, 0.005, 0.0)), (0.25, (0.40, 0.0
                 (1.00, (4.2, 3.3, 2.1)), (1.30, (5.2, 4.8, 4.0)))
 WAX = Gradient((0.0, (0.06, 0.002, 0.008)), (0.4, (0.45, 0.015, 0.035)), (0.7, (0.95, 0.06, 0.08)),
                (0.88, (1.35, 0.20, 0.20)), (1.0, (2.2, 0.90, 0.85)))
-ROSE = Gradient((0.0, (0.03, 0.0, 0.004)), (0.3, (0.22, 0.003, 0.018)), (0.55, (0.62, 0.012, 0.045)),
-                (0.75, (1.0, 0.045, 0.08)), (0.9, (1.25, 0.12, 0.15)), (1.0, (1.45, 0.30, 0.32)))
+ROSE = Gradient((0.0, (0.06, 0.0, 0.008)), (0.3, (0.34, 0.006, 0.028)), (0.55, (0.78, 0.02, 0.06)),
+                (0.75, (1.1, 0.06, 0.10)), (0.9, (1.35, 0.16, 0.19)), (1.0, (1.55, 0.36, 0.38)))
 LEAF_EDGE = rgb(0.30, 0.06, 0.03)              # young rose leaves have bronze-red edges
 LEAF = Gradient((0.0, (0.003, 0.02, 0.005)), (0.4, (0.02, 0.14, 0.03)), (0.7, (0.07, 0.36, 0.07)),
                 (0.9, (0.20, 0.62, 0.16)), (1.0, (0.45, 0.85, 0.32)))
@@ -398,7 +400,7 @@ class Film:
         # four flaps folded over the back, worked out for every pixel and then averaged into the cells
         box = cell_box(x0, y0, x1, y1)
         FX, FY = fine_grid(box)
-        top_tip, bot_tip = sy + 32.0, sy - 80.0
+        top_tip, bot_tip = sy - 22.0, sy - 80.0                     # the top flap's point lies under the middle of the heart
 
         def into_top(x, y):                                # how far (pixels) a point is inside the top flap
             return (top_tip + (y0 - top_tip) * np.abs(x - sx) / (sx - x0) - y) / math.hypot(1.0, (top_tip - y0) / (sx - x0))
@@ -446,7 +448,7 @@ class Film:
         wbox = cell_box(sx - 130.0, sy - 125.0, sx + 130.0, sy + 115.0)
         WX, WY = fine_grid(wbox)
         wdx, wdy = WX - sx, WY - sy
-        wax_px = np.hypot(wdx, wdy) < heart_radius(np.arctan2(wdy, wdx))
+        wax_px = np.hypot(wdx, wdy) < heart_radius(np.arctan2(wdy, wdx), wobble=0.0)   # a neat, even heart
         edge_d = cv2.distanceTransform(wax_px.astype(np.uint8), cv2.DIST_L2, 5)   # pixels to the edge of the wax
         hx, hy = wdx / 50.0, 0.25 - wdy / 45.0
         stamp = ((hx * hx + hy * hy - 1.0) ** 3 - hx * hx * hy ** 3 < 0).astype(np.uint8)
@@ -467,12 +469,12 @@ class Film:
         spec = np.clip(nx * hl[0] + ny * hl[1] + nz * hl[2], 0.0, 1.0)
         spec = 0.5 * spec ** 16 + 1.4 * spec ** 80                              # a soft sheen and a sharp glint
         hollow = smoothstep(0.0, 6.0, s_in)                                      # inside the stamp, less light gets in
-        shade = (0.08 + 1.05 * diffuse ** 1.3) * (1.0 - 0.40 * hollow)
+        shade = (0.30 + 0.80 * diffuse ** 1.3) * (1.0 - 0.35 * hollow)          # both halves of the heart stay visible
         w_col = WAX_BASE * shade[..., None] + WAX_SHINE * spec[..., None]
         # the raised wax casts a small shadow on the paper, down and to the right
-        drop = cv2.GaussianBlur(np.roll(wax_px.astype(np.float32), (7, 5), axis=(0, 1)), (0, 0), 4.0)
+        drop = cv2.GaussianBlur(np.roll(wax_px.astype(np.float32), (4, 3), axis=(0, 1)), (0, 0), 3.0)
         drop = paste(np.zeros((ROWS, COLS), np.float32), to_cells(drop * ~wax_px, wbox), wbox)
-        albedo = albedo * (1.0 - 0.55 * drop[..., None])
+        albedo = albedo * (1.0 - 0.40 * drop[..., None])
         w_cov = to_cells(wax_px.astype(np.float32), wbox)
         w_col = to_cells(w_col * wax_px[..., None], wbox) / np.maximum(w_cov, 1e-3)[..., None]
         wax = paste(np.zeros((ROWS, COLS), bool), w_cov > 0.45, wbox)
@@ -544,8 +546,8 @@ class Film:
             gx_c = cv2.resize(gxx / (CW / 2.0), (hw // 2, hh // 2), interpolation=cv2.INTER_AREA)
             gy_c = cv2.resize(gyy / (CH / 2.0), (hw // 2, hh // 2), interpolation=cv2.INTER_AREA)
             ang = np.degrees(np.arctan2(gy_c, gx_c)) + 90.0
-            mean = np.where(line, mean * 0.5, mean)
-            glyph = np.where(line, self.line[line_index(ang)], self.pick("petal", np.clip(mean / 1.05, 0.0, 1.0)))
+            mean = np.where(line, mean * 0.40, mean)                              # the shadow where one petal lies over another
+            glyph = self.pick("petal", np.clip(mean / 1.05, 0.0, 1.0))
             masks.append(cov > 0.45)
             shades.append(np.clip(mean, 0.0, 1.3).astype(np.float32))
             glyphs.append(glyph.astype(np.int32))
@@ -1050,12 +1052,10 @@ class Film:
                     c0 = -0.3 + 2.0 * (t - T_SHINE) / 1.1
                     col += WHITE * (0.55 * np.exp(-((self.shine_pos[paper] - c0) / 0.07) ** 2))[:, None]
                 glyph = np.where(ap < 0.12, self.pick("flicker", fk), self.l_glyph[paper])
-                if T_TOUCH <= t < T_IGNITE + 0.2:            # the wax glows and bubbles under the flame
+                if T_TOUCH <= t < T_IGNITE + 0.2:            # the wax glows under the flame (its shape stays still)
                     hk = float(smoothstep(T_TOUCH, T_IGNITE, t))
                     wx = self.wax[paper]
-                    col[wx] += FIRE(0.35 + 0.35 * hk + 0.15 * fk[wx]) * hk * hk
-                    bubble = wx & (fk > 1.0 - 0.35 * hk)
-                    glyph[bubble] = self.pick("wax", fk[bubble])
+                    col[wx] += FIRE(0.35 + 0.35 * hk + 0.08 * fk[wx]) * hk * hk
                 G[paper], C[paper] = glyph, col
             char = L & (t >= self.ti + RIM) & ~front_fire
             if char.any():
