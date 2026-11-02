@@ -1,11 +1,12 @@
 """
 Ronaldo in ASCII - particle edition.
 
-Thousands of glowing particles drift in the dark, then fly in one by one and
-build Cristiano Ronaldo (No. 7, red kit, seen from behind) out of coloured text
-characters, from his boots up to his head. Every character is chosen from the
-photo: denser characters where it is brighter, line characters ( / \\ | _ ( ) )
+Thousands of glowing particles fall slowly from above, then fly in one by one
+and build Cristiano Ronaldo (No. 7, red kit, seen from behind) out of coloured
+text characters, from his head down to his boots. Every character is chosen from
+the photo: denser characters where it is brighter, line characters ( / \\ | _ ( ) )
 along edges, the photo's own colour, and the name on his shirt in real letters.
+The window uses characters twice as big as the video, so they are easy to see.
 
 Needs:   pip install numpy opencv-python pillow imageio-ffmpeg
 Files:   ronaldo_art.npz (the finished art) next to this script; that is all it needs
@@ -38,10 +39,13 @@ SEED = 7                        # another number gives different particle paths
 
 # ------------------------------------------------------------------ layout
 # The picture is 1080x1920 (a phone screen standing up), made of character
-# cells 6 pixels wide and 12 tall: 180 columns and 160 rows.
+# cells 6 pixels wide and 12 tall: 180 columns and 160 rows (the video and the still).
+# The window uses cells twice as big: 90 columns and 80 rows, so each character is
+# easy to see on a laptop screen.
 W, H = 1080, 1920
 CW, CH = 6, 12
 COLS, ROWS = W // CW, H // CH
+WIN_CW, WIN_CH = 12, 24
 FILL, FILL_W = 0.88, 0.92       # at most this tall and this wide, as parts of the picture (his feet are wide apart)
 
 # characters
@@ -53,8 +57,8 @@ FLICKER = "@#%&*+=$"           # characters flash through these as a particle la
 GLYPHS = "".join(dict.fromkeys(RAMP + LINES + NAME + FLICKER))
 
 # timeline (seconds)
-T_BUILD = 1.4                   # the first particles land on his boots
-T_DONE = 9.6                    # the last ones land on his head
+T_BUILD = 1.4                   # the first particles land on his head
+T_DONE = 9.6                    # the last ones land on his boots
 FLY = (1.3, 2.4)                # each particle flies this long (shortest, longest)
 T_SWEEP = 10.2                  # a soft light sweeps up over him
 SWEEP = 1.6                     # ...and takes this long
@@ -147,37 +151,39 @@ def place(rgb, alpha):
     return np.clip(big, 0.0, 1.0), np.clip(a, 0.0, 1.0), M
 
 
-def convert(rgb, alpha):
-    """Choose a character and a colour for every cell.
+def convert(rgb, alpha, cw=CW, ch=CH):
+    """Choose a character and a colour for every cell (cells cw x ch pixels of the 1080x1920 picture).
 
     The shading of the photo picks a character from RAMP (more ink = brighter). Where the photo has a
     real edge, a character from LINES whose shape lines up with that edge can win instead. Colours are
     the photo's own, a little brightened so thin characters still show them. Returns the character
-    numbers (ROWS x COLS, -1 = empty) and colours (sRGB)."""
+    numbers (rows x columns, -1 = empty) and colours (sRGB)."""
+    cols, rows = W // cw, H // ch
     big, a, M = place(rgb, alpha)
     # pixels on his outline are mixed with the stadium behind him: take their colour from just inside
     sure = (a > 0.92).astype(np.float32)
     near = cv2.GaussianBlur(big * sure[..., None], (0, 0), 5.0) / np.maximum(cv2.GaussianBlur(sure, (0, 0), 5.0), 1e-4)[..., None]
     big = np.where(sure[..., None] > 0, big, near)
-    atlas = build_atlas(CW, CH)                           # shapes are compared at the video's cell size
+    atlas = build_atlas(cw, ch)                           # shapes are compared at this cell size
     chars = RAMP + LINES
     idx = np.array([GLYPHS.index(c) for c in chars])
     G = atlas[idx]
     K, nr = len(chars), len(RAMP)
     tone_g = G.mean((1, 2)) / G[:nr].mean((1, 2)).max()  # how bright each character looks (0..1)
     # each character's shape: softened, without its average, scaled to length 1
-    Gs = np.stack([cv2.GaussianBlur(g, (0, 0), 0.8) for g in G]).reshape(K, -1)
+    blur = 0.8 * cw / CW
+    Gs = np.stack([cv2.GaussianBlur(g, (0, 0), blur) for g in G]).reshape(K, -1)
     Gs -= Gs.mean(1, keepdims=True)
     Gs /= np.maximum(np.linalg.norm(Gs, axis=1, keepdims=True), 1e-6)
     # brightness of the photo: vivid red counts as bright, as it looks; black where he is not
     light = (0.5 * (big * np.array([0.299, 0.587, 0.114], np.float32)).sum(-1) + 0.5 * big.max(-1)) * a
-    soft = cv2.GaussianBlur(light, (0, 0), 0.8)
-    P = soft.reshape(ROWS, CH, COLS, CW).transpose(0, 2, 1, 3).reshape(-1, CH * CW)
+    soft = cv2.GaussianBlur(light, (0, 0), blur)
+    P = soft.reshape(rows, ch, cols, cw).transpose(0, 2, 1, 3).reshape(-1, ch * cw)
     Pz = P - P.mean(1, keepdims=True)
-    contrast = np.linalg.norm(Pz, axis=1) / math.sqrt(CH * CW)             # how much edge is in the cell
-    match = (Pz @ Gs.T) / np.maximum(contrast * math.sqrt(CH * CW), 1e-6)[:, None]   # -1..1 shape match
-    cover = a.reshape(ROWS, CH, COLS, CW).mean((1, 3)).ravel()
-    tone = cv2.GaussianBlur(light, (0, 0), CW).reshape(ROWS, CH, COLS, CW).mean((1, 3)).ravel()
+    contrast = np.linalg.norm(Pz, axis=1) / math.sqrt(ch * cw)             # how much edge is in the cell
+    match = (Pz @ Gs.T) / np.maximum(contrast * math.sqrt(ch * cw), 1e-6)[:, None]   # -1..1 shape match
+    cover = a.reshape(rows, ch, cols, cw).mean((1, 3)).ravel()
+    tone = cv2.GaussianBlur(light, (0, 0), cw).reshape(rows, ch, cols, cw).mean((1, 3)).ravel()
     inside = cover > 0.12
     lo, hi = np.percentile(tone[inside], [2, 99.5])
     T = 0.30 + 0.70 * np.clip((tone - lo) / (hi - lo), 0.0, 1.0) ** 0.75   # wanted brightness 0..1
@@ -187,12 +193,12 @@ def convert(rgb, alpha):
     score[:, nr:] += 0.08 + 2.0 * (1.0 - edge[:, None])                    # line characters only on edges
     score[:, 0] += np.where(T > 0.06, 1.0, 0.0)                            # a blank only for black
     k = np.where(inside, idx[score.argmin(1)], -1)
-    col = (big * a[..., None]).reshape(ROWS, CH, COLS, CW, 3).mean((1, 3)).reshape(-1, 3)
+    col = (big * a[..., None]).reshape(rows, ch, cols, cw, 3).mean((1, 3)).reshape(-1, 3)
     col /= np.maximum(cover, 1e-3)[:, None]
     v = col.max(1, keepdims=True)
     boost = np.clip(0.95 / np.maximum(v, 1e-3), 1.0, 3.0) ** 0.7
     col *= 1.0 + (boost - 1.0) * (0.3 + 0.7 * smoothstep(0.12, 0.45, v))   # dark hair stays dark
-    k, col = k.reshape(ROWS, COLS), np.clip(col, 0.0, 1.0).reshape(ROWS, COLS, 3)
+    k, col = k.reshape(rows, cols), np.clip(col, 0.0, 1.0).reshape(rows, cols, 3)
     k[k == GLYPHS.index(" ")] = -1
 
     # the printed name: real letters in white, spaced out over the red shirt
@@ -200,15 +206,19 @@ def convert(rgb, alpha):
     hgt, wid = rgb.shape[:2]
     cx0, cx1 = M[0, 0] * x0 * wid + M[0, 2], M[0, 0] * x1 * wid + M[0, 2]
     cy0, cy1 = M[1, 1] * y0 * hgt + M[1, 2], M[1, 1] * y1 * hgt + M[1, 2]
-    r0, r1 = int(cy0 // CH), int(cy1 // CH)
-    c0, c1 = int(cx0 // CW), int(cx1 // CW) + 1
+    r0, r1 = int(cy0 // ch), int(cy1 // ch)
+    c0, c1 = int(cx0 // cw), int(cx1 // cw) + 1
     shirt = np.median(col[max(0, r0 - 2), c0:c1], axis=0)
     for r in range(r0, r1 + 1):
         k[r, c0:c1] = GLYPHS.index("#")
         col[r, c0:c1] = shirt
-    mid = int(((cy0 + cy1) / 2) // CH)
+    mid = int(((cy0 + cy1) / 2) // ch)
+    roomy = (cx1 - cx0) / cw >= 2 * len(NAME)                # room for gaps between the letters?
     for i, letter in enumerate(NAME):
-        c = int((cx0 + (i + 0.5) * (cx1 - cx0) / len(NAME)) // CW)
+        if roomy:                                             # spaced out over the name's width, as printed
+            c = int((cx0 + (i + 0.5) * (cx1 - cx0) / len(NAME)) // cw)
+        else:                                                 # big characters: one word, in the middle
+            c = int((cx0 + cx1) / 2 // cw - len(NAME) // 2 + i)
         k[mid, c], col[mid, c] = GLYPHS.index(letter), (0.97, 0.97, 0.97)
     return k, col
 
@@ -218,9 +228,11 @@ class Film:
     """The animation: build once, then render(t) for any time t (seconds)."""
 
     def __init__(self, k, col, cw, ch, seed=SEED):
-        self.cw, self.ch = cw, ch
-        self.s = cw / CW                                  # screen pixels per layout pixel
-        self.w, self.h = COLS * cw, ROWS * ch
+        self.rows, self.cols = k.shape
+        self.lcw, self.lch = W / self.cols, H / self.rows  # size of a cell on the 1080x1920 picture
+        self.cw, self.ch = cw, ch                         # size of a cell on the screen
+        self.s = cw / self.lcw                            # screen pixels per layout pixel
+        self.w, self.h = self.cols * cw, self.rows * ch
         self.end = None                                   # fade to black at this time (for the video)
         self.atlas = build_atlas(cw, ch)
         self.atlas_rows = self.atlas.reshape(-1, cw)      # each pixel row of each character
@@ -229,22 +241,27 @@ class Film:
         self.col = to_linear(col) * 1.12                  # colours as light, a touch brighter
         rng = np.random.default_rng(seed)
 
-        # one particle for every character
+        # particles: one for every character (more for big characters, so the swarm looks the same)
         cells = np.argwhere(k >= 0)
-        self.cr, self.cc = cells[:, 0], cells[:, 1]
-        n = len(cells)
-        tx, ty = (self.cc + 0.5) * CW, (self.cr + 0.5) * CH
-        y_top, y_bot = ty.min(), ty.max()
-        up = (y_bot - ty) / max(y_bot - y_top, 1.0)       # 0 at his boots .. 1 at the top of his head
-        wave = 0.04 * np.sin(tx / 70.0)                   # the build-up line is a little wavy
-        land = T_BUILD + (T_DONE - T_BUILD - 0.5) * np.clip(up + wave, 0, 1) ** 0.95 + 0.5 * rng.random(n)
+        per = max(1, int(round(self.lcw * self.lch / (CW * CH))))
+        cy, cx = (cells[:, 0] + 0.5) * self.lch, (cells[:, 1] + 0.5) * self.lcw
+        y_top, y_bot = cy.min(), cy.max()
+        down = (cy - y_top) / max(y_bot - y_top, 1.0)     # 0 at the top of his head .. 1 at his boots
+        wave = 0.04 * np.sin(cx / 70.0)                   # the building line is a little wavy
+        first = T_BUILD + (T_DONE - T_BUILD - 0.5) * np.clip(down + wave, 0, 1) ** 0.95 + 0.5 * rng.random(len(cells))
+        self.land = np.full((self.rows, self.cols), np.inf, np.float32)
+        self.land[cells[:, 0], cells[:, 1]] = first       # a character lights up when its first particle lands
+        self.cr, self.cc = np.repeat(cells[:, 0], per), np.repeat(cells[:, 1], per)
+        n = len(self.cr)
+        later = np.where(np.arange(n) % per == 0, 0.0, rng.uniform(0.03, 0.35, n))
+        land = np.repeat(first, per) + later
+        tx = (self.cc + 0.5) * self.lcw + (np.arange(n) % per > 0) * rng.uniform(-0.3, 0.3, n) * self.lcw
+        ty = (self.cr + 0.5) * self.lch + (np.arange(n) % per > 0) * rng.uniform(-0.3, 0.3, n) * self.lch
         fly = rng.uniform(*FLY, n)
-        self.land = np.full((ROWS, COLS), np.inf, np.float32)
-        self.land[self.cr, self.cc] = land
         self.p_land, self.p_fly = land.astype(np.float32), fly.astype(np.float32)
         self.p_to = np.stack([tx, ty], 1).astype(np.float32)
-        # before they fly, particles drift slowly upwards all over the picture, swaying
-        self.p0 = np.stack([rng.uniform(-40, W + 40, n), rng.uniform(0, H + 80, n)], 1).astype(np.float32)
+        # before they fly, particles fall slowly from the top of the picture, swaying
+        self.p0 = np.stack([rng.uniform(-40, W + 40, n), rng.uniform(-0.25 * H, 0.42 * H, n)], 1).astype(np.float32)
         self.p_vy = rng.uniform(12.0, 40.0, n).astype(np.float32)
         self.p_sw = rng.uniform(8.0, 26.0, n).astype(np.float32)
         self.p_ph = rng.uniform(0.0, 6.3, (n, 2)).astype(np.float32)
@@ -253,12 +270,12 @@ class Film:
         d = self.p_to - start
         normal = np.stack([-d[:, 1], d[:, 0]], 1) / np.maximum(np.hypot(d[:, 0], d[:, 1]), 1.0)[:, None]
         self.p_from = start
-        self.p_mid = ((start + self.p_to) / 2 + normal * rng.normal(0.0, 0.35, (n, 1)) * np.hypot(d[:, 0], d[:, 1])[:, None]
-                      - np.array([0.0, 60.0], np.float32)).astype(np.float32)   # a curved path, bowing upwards a little
+        self.p_mid = ((start + self.p_to) / 2
+                      + normal * rng.normal(0.0, 0.30, (n, 1)) * np.hypot(d[:, 0], d[:, 1])[:, None]).astype(np.float32)   # a curved path
         lin = self.col[self.cr, self.cc]
         self.p_col = (0.55 * lin / np.maximum(lin.max(1, keepdims=True), 0.05) + 0.45 * SPARK).astype(np.float32)
         self.p_tw = rng.uniform(1.0, 3.5, n).astype(np.float32)                 # how fast each one twinkles
-        # a few faint embers keep rising round him the whole time
+        # a few faint embers keep falling round him the whole time
         m = 260
         self.e0 = np.stack([rng.uniform(0, W, m), rng.uniform(0, H + 80, m)], 1).astype(np.float32)
         self.e_vy = rng.uniform(25.0, 70.0, m).astype(np.float32)
@@ -272,25 +289,24 @@ class Film:
         self.bg = (np.array([0.010, 0.006, 0.012], np.float32) * np.exp(-3.0 * r * r)[..., None]
                    + np.array([0.0012, 0.0012, 0.0025], np.float32))           # a faint glow behind him
         self.qh, self.qw = self.h // 4, self.w // 4
-        cy = (np.arange(ROWS, dtype=np.float32) + 0.5) * CH
-        self.sweep_y = cy[:, None]
+        self.sweep_y = ((np.arange(self.rows, dtype=np.float32) + 0.5) * self.lch)[:, None]
         # turning light into screen colours: kept true to the photo, bright glows roll off softly
         self.enc = 255.0 / math.log1p(400.0 * 8.0)
         x = np.expm1(np.arange(256) / self.enc) / 400.0
         soft = np.where(x < 0.8, x, 0.8 + 0.2 * (1.0 - np.exp(-(x - 0.8) / 0.2)))
         self.tone = np.clip(to_srgb(soft) * 255.0 + 0.5, 0, 255).astype(np.uint8)
-        self.buf_glyph = np.empty((ROWS, ch, COLS, cw), np.float32)
+        self.buf_glyph = np.empty((self.rows, ch, self.cols, cw), np.float32)
         self.buf_img, self.buf_up, self.buf_a3 = (np.empty((self.h, self.w, 3), np.float32) for _ in range(3))
         self.buf_u8, self.buf_tone = (np.empty((self.h, self.w, 3), np.uint8) for _ in range(2))
         self.out = np.zeros((self.h, self.w, 3), np.uint8)
-        self.glints = rng.random((ROWS, COLS)).astype(np.float32)
+        self.glints = rng.random((self.rows, self.cols)).astype(np.float32)
 
     def _drift(self, t, i):
-        """Where particles i are at time(s) t while they drift (layout pixels)."""
+        """Where particles i are at time(s) t while they fall slowly (layout pixels)."""
         t = np.asarray(t, np.float32)
         x = self.p0[i, 0] + self.p_sw[i] * np.sin(t * self.p_hz[i, 0] + self.p_ph[i, 0])
-        y = self.p0[i, 1] - self.p_vy[i] * t + 0.6 * self.p_sw[i] * np.cos(t * self.p_hz[i, 1] + self.p_ph[i, 1])
-        return np.stack([x, np.mod(y + 40.0, H + 80.0) - 40.0], 1).astype(np.float32)
+        y = self.p0[i, 1] + self.p_vy[i] * t + 0.6 * self.p_sw[i] * np.cos(t * self.p_hz[i, 1] + self.p_ph[i, 1])
+        return np.stack([x, y], 1).astype(np.float32)
 
     def _flight(self, i, f):
         """Points along the curved paths of particles i, f = 0 (set off) .. 1 (landed)."""
@@ -348,15 +364,15 @@ class Film:
                 for j, back in enumerate((0.0, 0.025, 0.05, 0.08)):    # a short glowing trail behind each
                     p = self._flight(i, np.clip(f - back, 0.0, 1.0))
                     self._dots(lb, p, self.p_col[i] * (glow * (1.0 - 0.22 * j))[:, None], s2)
-        if particles:                                      # faint embers rising
+        if particles:                                      # faint embers falling
             ex = self.e0[:, 0] + 14.0 * np.sin(t * 0.8 + self.e_ph)
-            ey = np.mod(self.e0[:, 1] - self.e_vy * t + 40.0, H + 80.0) - 40.0
+            ey = np.mod(self.e0[:, 1] + self.e_vy * t + 40.0, H + 80.0) - 40.0
             b = (0.06 + 0.05 * np.sin(t * 3.0 + self.e_ph * 3.0)) * float(smoothstep(0.0, 1.5, t))
             self._dots(lb, np.stack([ex, ey], 1), self.e_col * b[:, None], s2)
         flash = (heat > 0.08)
         if flash.any():                                    # each landing gives a small flash of light
             r, c = np.nonzero(flash)
-            p = np.stack([(c + 0.5) * CW, (r + 0.5) * CH], 1)
+            p = np.stack([(c + 0.5) * self.lcw, (r + 0.5) * self.lch], 1)
             self._dots(lb, p, HOT(np.full(len(r), 0.9)) * (0.6 * heat[r, c])[:, None], s2)
         lb = cv2.GaussianBlur(lb, (0, 0), 0.9)
 
@@ -391,27 +407,50 @@ class Film:
 
 
 # ------------------------------------------------------------------ playing and saving
-def make_art(photo=None, save=False):
-    """The art: a character number (-1 = empty) and an sRGB colour for every cell. Worked out from the
-    photo when one is given, otherwise read from ART_FILE (made from the same photo)."""
+GRIDS = {"fine": (CW, CH, ""), "window": (WIN_CW, WIN_CH, "_win")}   # cell size, name in the art file
+
+
+def make_art(photo=None, save=False, grid="fine"):
+    """The art: a character number (-1 = empty) and an sRGB colour for every cell, for the fine grid
+    (video and still) or the window grid (bigger characters). Worked out from the photo when one is
+    given, otherwise read from ART_FILE (made from the same photo)."""
     art = os.path.join(HERE, ART_FILE)
+    cw, ch, key = GRIDS[grid]
     if photo:
         rgb, alpha = load_photo(photo, os.path.join(HERE, MASK))
-        k, col = convert(rgb, alpha)
         if save:                                             # characters as text, colours as 0..255
-            text = np.where(k >= 0, np.array(list(GLYPHS))[np.maximum(k, 0)], " ")
-            np.savez_compressed(art, text=text, col=np.round(col * 255.0).astype(np.uint8))
+            data = {}
+            for g, (gw, gh, gk) in GRIDS.items():
+                k, col = convert(rgb, alpha, gw, gh)
+                data["text" + gk] = np.where(k >= 0, np.array(list(GLYPHS))[np.maximum(k, 0)], " ")
+                data["col" + gk] = np.round(col * 255.0).astype(np.uint8)
+            np.savez_compressed(art, **data)
             print(f"saved {art}")
-        return k, col
+        return convert(rgb, alpha, cw, ch)
     if not os.path.exists(art):
         sys.exit(f"{ART_FILE} should be next to this script (or make it: --photo {PHOTO} --save-art).")
     with np.load(art) as f:
-        text, col = f["text"], f["col"]
-    if text.shape != (ROWS, COLS):
+        if "text" + key not in f:
+            sys.exit(f"{ART_FILE} is an older one; make it again with --photo {PHOTO} --save-art.")
+        text, col = f["text" + key], f["col" + key]
+    if text.shape != (H // ch, W // cw):
         sys.exit(f"{ART_FILE} was made for another size; make it again with --photo {PHOTO} --save-art.")
     number = {c: i for i, c in enumerate(GLYPHS)}
     k = np.vectorize(lambda c: -1 if c == " " else number.get(c, -1))(text).astype(np.int32)
     return k, col.astype(np.float32) / 255.0
+
+
+def window_film(screen_w, screen_h, photo=None):
+    """The film for the window, with characters as big as the screen allows (the window grid), and the
+    rows of the picture it shows (where he is) and the window size."""
+    k, col = make_art(photo, grid="window")
+    rows = np.nonzero((k >= 0).any(1))[0]
+    r0, r1 = max(0, rows[0] - 3), min(k.shape[0], rows[-1] + 4)   # a little room above and below him
+    fit = min((screen_h - 60) / (r1 - r0), 2.0 * (screen_w - 40) / k.shape[1])   # screen pixels per row
+    ch = max(8, int(fit) // 2 * 2)                           # characters are twice as tall as wide
+    film = Film(k, col, ch // 2, ch)
+    scale = max(1.0, min(fit / ch, 1.5))
+    return film, r0 * ch, r1 * ch, (int(film.w * scale), int((r1 - r0) * ch * scale))
 
 
 def play(photo=None):
@@ -424,13 +463,7 @@ def play(photo=None):
         screen_w, screen_h = area.right - area.left, area.bottom - area.top
     except (ImportError, AttributeError, OSError):
         screen_w, screen_h = 1920, 1040
-    k, col = make_art(photo)
-    film = Film(k, col, 4, 8)                                # drawn at 720x1280, then fitted to the screen
-    rows = np.nonzero((k >= 0).any(1))[0]                    # the window shows the part where he is
-    top = max(0, int(((rows[0] * CH) - 80) * film.s))
-    bottom = min(film.h, int(((rows[-1] + 1) * CH + 80) * film.s))
-    scale = min((screen_h - 60) / (bottom - top), (screen_w - 40) / film.w, 1.5)
-    size = (int(film.w * scale), int((bottom - top) * scale))
+    film, top, bottom, size = window_film(screen_w, screen_h, photo)
     title = "Ronaldo ASCII"
     cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
     cv2.resizeWindow(title, *size)
@@ -439,8 +472,8 @@ def play(photo=None):
     while True:
         t = time.perf_counter() - start
         frame = cv2.cvtColor(film.render(t)[top:bottom], cv2.COLOR_RGB2BGR)
-        if frame.shape[1] != size[0]:
-            frame = cv2.resize(frame, size, interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR)
+        if frame.shape[1] != size[0]:                        # only on screens too big for the largest characters
+            frame = cv2.resize(frame, size, interpolation=cv2.INTER_LINEAR)
         cv2.imshow(title, frame)
         key = cv2.waitKey(1) & 0xFF
         if key in (27, ord("q")):
@@ -460,7 +493,7 @@ def save_video(photo, seconds):
         import imageio_ffmpeg
     except ImportError:
         sys.exit("Saving the video needs imageio-ffmpeg:  pip install imageio-ffmpeg")
-    k, col = make_art(photo)
+    k, col = make_art(photo, grid="fine")
     film = Film(k, col, CW, CH)
     film.end = seconds
     path = os.path.join(HERE, VIDEO_FILE)
@@ -478,7 +511,7 @@ def save_video(photo, seconds):
 
 
 def save_picture(photo):
-    k, col = make_art(photo)
+    k, col = make_art(photo, grid="fine")
     film = Film(k, col, CW * 2, CH * 2)                      # twice as big: 2160x3840, sharp characters
     frame = film.render(60.0, still=True)                    # long after he is finished, without effects
     path = os.path.join(HERE, IMAGE_FILE)
