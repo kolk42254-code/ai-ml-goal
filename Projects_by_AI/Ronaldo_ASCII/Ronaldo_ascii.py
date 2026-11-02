@@ -6,21 +6,26 @@ and build Cristiano Ronaldo (No. 7, red kit, seen from behind) out of coloured
 text characters, from his head down to his boots. Every character is chosen from
 the photo: denser characters where it is brighter, line characters ( / \\ | _ ( ) )
 along edges, the photo's own colour, and the name on his shirt in real letters.
-The window uses characters twice as big as the video, so they are easy to see.
+It plays right in the terminal and fills it; it fits itself again whenever the
+terminal changes size. A bigger terminal, or a smaller terminal font, gives more detail.
 
 Needs:   pip install numpy opencv-python pillow imageio-ffmpeg
 Files:   ronaldo_art.npz (the finished art) next to this script; that is all it needs
-Run:     python Ronaldo_ascii.py                  plays it in a window
+Run:     python Ronaldo_ascii.py                  plays it here in the terminal, filling it
+         python Ronaldo_ascii.py --window         plays it in a separate window instead
          python Ronaldo_ascii.py --mp4            saves ronaldo_ascii.mp4 (1080x1920, 60 fps)
          python Ronaldo_ascii.py --png            saves ronaldo_ascii.png (2160x3840 still picture)
 Remake:  python Ronaldo_ascii.py --photo ronaldo.jpg --save-art
          works the art out again from the photo (with his outline, ronaldo_mask.png) and saves it
-Keys:    R or Space = play again,  F = full screen,  Esc or Q = close
+Keys:    R or Space = play again,  Esc or Q = close  (in the window, F = full screen)
+Tip:     for more detail, make the terminal bigger (maximise it) or its font smaller
+         (Ctrl and minus in Windows Terminal)
 """
 
 import argparse
 import math
 import os
+import shutil
 import sys
 import time
 
@@ -224,7 +229,26 @@ def convert(rgb, alpha, cw=CW, ch=CH):
 
 
 # ------------------------------------------------------------------ the film
-class Film:
+class Particles:
+    """Paths of the particles: falling slowly (with p0, p_vy, p_sw, p_hz, p_ph), then flying along a
+    curve (p_from, p_mid, p_to) to the character they light up."""
+
+    def _drift(self, t, i):
+        """Where particles i are at time(s) t while they fall slowly."""
+        t = np.asarray(t, np.float32)
+        x = self.p0[i, 0] + self.p_sw[i] * np.sin(t * self.p_hz[i, 0] + self.p_ph[i, 0])
+        y = self.p0[i, 1] + self.p_vy[i] * t + 0.6 * self.p_sw[i] * np.cos(t * self.p_hz[i, 1] + self.p_ph[i, 1])
+        return np.stack([x, y], 1).astype(np.float32)
+
+    def _flight(self, i, f):
+        """Points along the curved paths of particles i, f = 0 (set off) .. 1 (landed)."""
+        e = f * f * f * (f * (f * 6.0 - 15.0) + 10.0)      # slow start, slow landing
+        a, b, c = self.p_from[i], self.p_mid[i], self.p_to[i]
+        e = e[:, None]
+        return (1 - e) ** 2 * a + 2 * e * (1 - e) * b + e * e * c
+
+
+class Film(Particles):
     """The animation: build once, then render(t) for any time t (seconds)."""
 
     def __init__(self, k, col, cw, ch, seed=SEED):
@@ -300,20 +324,6 @@ class Film:
         self.buf_u8, self.buf_tone = (np.empty((self.h, self.w, 3), np.uint8) for _ in range(2))
         self.out = np.zeros((self.h, self.w, 3), np.uint8)
         self.glints = rng.random((self.rows, self.cols)).astype(np.float32)
-
-    def _drift(self, t, i):
-        """Where particles i are at time(s) t while they fall slowly (layout pixels)."""
-        t = np.asarray(t, np.float32)
-        x = self.p0[i, 0] + self.p_sw[i] * np.sin(t * self.p_hz[i, 0] + self.p_ph[i, 0])
-        y = self.p0[i, 1] + self.p_vy[i] * t + 0.6 * self.p_sw[i] * np.cos(t * self.p_hz[i, 1] + self.p_ph[i, 1])
-        return np.stack([x, y], 1).astype(np.float32)
-
-    def _flight(self, i, f):
-        """Points along the curved paths of particles i, f = 0 (set off) .. 1 (landed)."""
-        e = f * f * f * (f * (f * 6.0 - 15.0) + 10.0)      # slow start, slow landing
-        a, b, c = self.p_from[i], self.p_mid[i], self.p_to[i]
-        e = e[:, None]
-        return (1 - e) ** 2 * a + 2 * e * (1 - e) * b + e * e * c
 
     def render(self, t, still=False):
         """The picture at time t as an RGB image (uint8). The same array is reused by the next call.
@@ -406,6 +416,295 @@ class Film:
         np.add.at(lb, (ys[ok], xs[ok]), col[ok].astype(np.float32))
 
 
+# ------------------------------------------------------------------ playing in the terminal
+LUMA = np.array([0.299, 0.587, 0.114], np.float32)
+
+
+def terminal_art(k, col, cols, rows):
+    """The art for a terminal of cols x rows characters, made from the fine art. Terminal characters are
+    about twice as tall as wide, like the fine ones, so every terminal character covers a square patch of
+    fine ones. Returns ASCII codes (0 = empty) and sRGB colours (0..1) for every cell."""
+    ink = np.append(build_atlas(CW, CH).mean((1, 2)), 0.0)  # ink of every character (the last one: empty)
+    inside = (k >= 0).astype(np.float64)
+    seen = ink[k] * (0.5 * (col * LUMA).sum(-1) + 0.5 * col.max(-1)) * inside   # how bright each fine cell looks
+    rr, cc = np.nonzero(inside)
+    top, bottom, left, right = rr.min(), rr.max() + 1, cc.min(), cc.max() + 1
+    f = max((right - left) / max(cols - 2, 1), (bottom - top) / max(rows - 2, 1))   # fine cells per terminal cell
+    us = (left + right) / 2 + (np.arange(cols + 1) - cols / 2) * f                # terminal cell edges, in fine cells
+    vs = (top + bottom) / 2 + (np.arange(rows + 1) - rows / 2) * f
+
+    def box(a):
+        """The sum of a over every terminal cell, worked out exactly from a summed table of a."""
+        a = a.reshape(a.shape[0], a.shape[1], -1)
+        S = np.zeros((a.shape[0] + 1, a.shape[1] + 1, a.shape[2]))
+        S[1:, 1:] = a.cumsum(0).cumsum(1)
+        v, u = np.clip(vs, 0, a.shape[0]), np.clip(us, 0, a.shape[1])
+        v0, u0 = np.minimum(v.astype(int), a.shape[0] - 1), np.minimum(u.astype(int), a.shape[1] - 1)
+        fv, fu = (v - v0)[:, None, None], (u - u0)[None, :, None]
+        I = ((S[v0][:, u0] * (1 - fu) + S[v0][:, u0 + 1] * fu) * (1 - fv)
+             + (S[v0 + 1][:, u0] * (1 - fu) + S[v0 + 1][:, u0 + 1] * fu) * fv)
+        return I[1:, 1:] - I[:-1, 1:] - I[1:, :-1] + I[:-1, :-1]
+
+    there = box(inside)[..., 0]
+    cover = there / (f * f)                                  # how much of each terminal cell is him
+    colour = box(col * inside[..., None]) / np.maximum(there, 1e-9)[..., None]
+    bright = box(seen)[..., 0] / np.maximum(there, 1e-9)
+    on = cover > 0.3
+    if not on.any():
+        return np.zeros((rows, cols), np.uint8), np.zeros((rows, cols, 3), np.float32)
+    lo, hi = np.percentile(bright[on], [2, 99.5])
+    want = 0.30 + 0.70 * np.clip((bright - lo) / max(hi - lo, 1e-9), 0.0, 1.0) ** 0.75
+    ramp = np.array([GLYPHS.index(c) for c in RAMP[1:]])
+    tone = ink[ramp] / ink[ramp].max()
+    pick = np.abs(tone[None, None, :] - want[..., None]).argmin(-1)
+    codes = np.where(on, np.frombuffer(RAMP[1:].encode(), np.uint8)[pick], 0)
+    # along his outline, characters that follow it: _ \ | /
+    gy, gx = np.gradient(cover)
+    gx = gx * 2.0                                            # a column is half as wide as a row is tall
+    along = np.mod(np.degrees(np.arctan2(gy, gx)) + 90.0, 180.0)
+    line = np.select([along < 22.5, along < 67.5, along < 112.5, along < 157.5],
+                     [ord("_"), ord("\\"), ord("|"), ord("/")], ord("_"))
+    codes = np.where(on & (cover < 0.9) & (np.hypot(gx, gy) > 0.25), line, codes).astype(np.uint8)
+    # the name on his shirt, when there is room for it
+    letters = np.isin(k, [GLYPHS.index(c) for c in set(NAME)])
+    if letters.any():
+        lr, lc = np.nonzero(letters)
+        r = int((lr.mean() + 0.5 - vs[0]) // f)
+        c0, c1 = int((lc.min() - us[0]) // f), int((lc.max() + 1 - us[0]) // f)
+        if c1 - c0 + 1 >= len(NAME) and 0 <= r < rows:
+            first = (c0 + c1 + 1) // 2 - len(NAME) // 2
+            codes[r, first:first + len(NAME)] = np.frombuffer(NAME.encode(), np.uint8)
+            colour[r, first:first + len(NAME)] = 0.97
+    return codes, np.clip(colour, 0.0, 1.0).astype(np.float32)
+
+
+class TermFilm(Particles):
+    """The animation drawn with the terminal's own characters: render(t) gives a character code and a
+    colour for every cell. Positions are measured in rows (a column is half a row wide)."""
+
+    def __init__(self, codes, colour, seed=SEED):
+        self.rows, self.cols = codes.shape
+        self.codes, self.lin = codes, to_linear(colour)
+        self.flicker = np.frombuffer(FLICKER.encode(), np.uint8)
+        rng = np.random.default_rng(seed)
+        cells = np.argwhere(codes > 0)
+        n = len(cells)
+        cy, cx = cells[:, 0] + 0.5, cells[:, 1] + 0.5
+        self.fig = fig = max(float(cy.max() - cy.min()), 1.0) if n else 1.0   # his height in rows
+        down = (cy - cy.min()) / fig if n else cy             # 0 at the top of his head .. 1 at his boots
+        wave = 0.04 * np.sin(cx * 0.5 / (0.0487 * fig))      # the building line is a little wavy
+        first = T_BUILD + (T_DONE - T_BUILD - 0.5) * np.clip(down + wave, 0, 1) ** 0.95 + 0.5 * rng.random(n)
+        self.land = np.full((self.rows, self.cols), np.inf, np.float32)
+        self.land[cells[:, 0], cells[:, 1]] = first
+        self.p_land, self.p_fly = first, rng.uniform(*FLY, n)
+        self.p_to = np.stack([cx * 0.5, cy], 1)
+        # before they fly, particles fall slowly from the top part, swaying
+        self.p0 = np.stack([rng.uniform(0, self.cols * 0.5, n), rng.uniform(-0.25 * self.rows, 0.42 * self.rows, n)], 1)
+        self.p_vy = rng.uniform(0.008, 0.028, n) * fig
+        self.p_sw = rng.uniform(0.006, 0.018, n) * fig
+        self.p_ph, self.p_hz = rng.uniform(0.0, 6.3, (n, 2)), rng.uniform(0.25, 0.7, (n, 2))
+        start = self._drift(self.p_land - self.p_fly, np.arange(n))
+        d = self.p_to - start
+        dist = np.maximum(np.hypot(d[:, 0], d[:, 1]), 1e-6)
+        normal = np.stack([-d[:, 1], d[:, 0]], 1) / dist[:, None]
+        self.p_from = start
+        self.p_mid = (start + self.p_to) / 2 + normal * rng.normal(0.0, 0.30, (n, 1)) * dist[:, None]
+        lin = self.lin[cells[:, 0], cells[:, 1]]
+        self.p_col = 0.55 * lin / np.maximum(lin.max(1, keepdims=True), 0.05) + 0.45 * SPARK
+        self.p_tw = rng.uniform(1.0, 3.5, n)
+        m = max(1, self.rows * self.cols // 70)               # faint embers falling the whole time
+        self.e0 = np.stack([rng.uniform(0, self.cols * 0.5, m), rng.uniform(0, self.rows, m)], 1)
+        self.e_vy = rng.uniform(0.017, 0.049, m) * fig
+        self.e_ph = rng.uniform(0.0, 6.3, m)
+        self.glints = rng.random((self.rows, self.cols))
+        self.row_y = (np.arange(self.rows) + 0.5)[:, None]
+
+    def render(self, t):
+        """Character codes (0 = empty) and sRGB colours (0..255) of every cell at time t."""
+        G = np.zeros((self.rows, self.cols), np.uint8)
+        C = np.zeros((self.rows, self.cols, 3), np.float32)
+
+        def put(p, char, colour, behind):
+            c, r = np.floor(p[:, 0] * 2.0).astype(np.int64), np.floor(p[:, 1]).astype(np.int64)
+            ok = (c >= 0) & (c < self.cols) & (r >= 0) & (r < self.rows)
+            if behind:                                        # only where nothing is drawn yet
+                ok[ok] = G[r[ok], c[ok]] == 0
+            G[r[ok], c[ok]] = char[ok] if np.ndim(char) else char
+            C[r[ok], c[ok]] = np.broadcast_to(colour, (len(ok), 3))[ok]
+
+        fade = float(smoothstep(0.0, 1.2, t))
+        ex = self.e0[:, 0] + 0.007 * self.fig * np.sin(t * 0.8 + self.e_ph)
+        ey = np.mod(self.e0[:, 1] + self.e_vy * t, self.rows + 2.0) - 1.0
+        b = 0.5 + 0.5 * np.sin(t * 3.0 + self.e_ph * 3.0)
+        v = b > 0.45
+        put(np.stack([ex, ey], 1)[v], ord("."), SPARK * (0.08 + 0.10 * b[v, None]) * fade, True)
+        launch = self.p_land - self.p_fly
+        i = np.nonzero(t < launch)[0]
+        if len(i):                                            # particles waiting, falling slowly and twinkling
+            p = self._drift(np.full(len(i), t, np.float32), i)
+            b = 0.5 + 0.5 * np.sin(t * self.p_tw[i] + self.p_ph[i, 0])
+            v = b > 0.5
+            put(p[v], np.where(b[v] > 0.92, ord(":"), ord(".")), self.p_col[i[v]] * (0.15 + 0.35 * b[v, None]) * fade, True)
+        # the characters that have landed: white-hot at first, cooling to their colour
+        age = t - self.land
+        on = age >= 0.0
+        heat = np.where(on, np.exp(-np.maximum(age, 0.0) / 0.30), 0.0)
+        lin = self.lin * (1.0 - heat[..., None]) + HOT(0.55 + 0.45 * heat) * (1.3 * heat)[..., None]
+        if T_SWEEP <= t < T_SWEEP + SWEEP:                    # a soft light sweeps up over him
+            y = self.rows * (1.0 - (t - T_SWEEP) / SWEEP) * 1.1 - 0.05 * self.rows
+            lin = lin + (WHITE * 0.45) * np.exp(-((self.row_y - y) / (0.0487 * self.fig)) ** 2)[..., None]
+        if t >= T_DONE:                                       # a few characters glint now and then
+            g = np.sin(t * 2.2 + self.glints * 40.0) * 0.5 + 0.5
+            lin = lin + WHITE * (0.35 * np.clip((g - 0.985) / 0.015, 0, 1))[..., None]
+        G = np.where(on, self.codes, G)
+        flick = on & (age < 0.08)
+        if flick.any():
+            G[flick] = self.flicker[(self.glints[flick] * 997 + t * 60).astype(np.int64) % len(self.flicker)]
+        C = np.where(on[..., None], lin, C)
+        i = np.nonzero((t >= launch) & (t < self.p_land))[0]
+        if len(i):                                            # particles flying in, with a short trail
+            f = (t - launch[i]) / self.p_fly[i]
+            glow = (0.4 + 0.6 * f)[:, None]
+            for back, k in ((0.10, 0.30), (0.05, 0.55)):
+                put(self._flight(i, np.clip(f - back, 0.0, 1.0)), ord("."), self.p_col[i] * k * glow, True)
+            put(self._flight(i, f), ord("*"), self.p_col[i] * (0.6 + 0.6 * glow) + WHITE * 0.25, False)
+        C *= float(smoothstep(0.0, 0.6, t))                   # fade in at the start
+        return G, (to_srgb(np.clip(C, 0.0, 1.0)) * 255.0 + 0.5).astype(np.uint8)
+
+
+class TerminalScreen:
+    """This terminal as a screen: coloured characters drawn with escape codes, sending only what changed."""
+
+    BG = "\x1b[48;2;10;8;14m"                                # a dark background whatever the terminal's theme
+
+    def __enter__(self):
+        self.fd, self.prev, self.esc = None, None, {}
+        if os.name == "nt":                                   # let the Windows console understand colour codes
+            import ctypes
+            from ctypes import wintypes
+            k32 = ctypes.windll.kernel32
+            k32.GetStdHandle.restype = wintypes.HANDLE
+            k32.GetConsoleMode.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+            k32.SetConsoleMode.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+            handle, mode = k32.GetStdHandle(-11), wintypes.DWORD()
+            if k32.GetConsoleMode(handle, ctypes.byref(mode)):  # 1 = processed output, 4 = colour codes
+                k32.SetConsoleMode(handle, mode.value | 0x0001 | 0x0004)
+        elif sys.stdin.isatty():                              # read keys one at a time, without Enter
+            import termios
+            import tty
+            self.fd = sys.stdin.fileno()
+            self.saved = termios.tcgetattr(self.fd)
+            tty.setcbreak(self.fd)
+        self._write("\x1b[?1049h\x1b[?25l\x1b[?7l" + self.BG + "\x1b[2J")   # own screen, no cursor, no wrapping
+        return self
+
+    def __exit__(self, *exc):
+        self._write("\x1b[0m\x1b[2J\x1b[?7h\x1b[?25h\x1b[?1049l")      # everything back as it was
+        if self.fd is not None:
+            import termios
+            termios.tcsetattr(self.fd, termios.TCSADRAIN, self.saved)
+
+    def _write(self, text):
+        sys.stdout.buffer.write(text.encode("ascii"))
+        sys.stdout.buffer.flush()
+
+    def size(self):
+        try:                                                  # ask the terminal itself, so resizing is noticed
+            s = os.get_terminal_size(sys.stdout.fileno())
+        except (OSError, ValueError):
+            s = shutil.get_terminal_size((120, 30))
+        return s.columns, s.lines
+
+    def keys(self):
+        """Keys pressed since the last call."""
+        out = []
+        if os.name == "nt":
+            import msvcrt
+            while msvcrt.kbhit():
+                out.append(msvcrt.getwch())
+        elif self.fd is not None:
+            import select
+            while select.select([self.fd], [], [], 0)[0]:
+                c = os.read(self.fd, 1)
+                if not c:
+                    break
+                out.append(c.decode("ascii", "ignore"))
+        return out
+
+    def clear(self):
+        self.prev = None
+        self._write(self.BG + "\x1b[2J")
+
+    def _colour(self, key):
+        if key not in self.esc:
+            r, g, b = ((key >> 10) & 31) * 8 + 4, ((key >> 5) & 31) * 8 + 4, (key & 31) * 8 + 4
+            self.esc[key] = f"\x1b[38;2;{r};{g};{b}m"
+        return self.esc[key]
+
+    def draw(self, G, rgb):
+        """Show a frame: G holds character codes (0 = empty), rgb their colours."""
+        G = np.where(G == 0, 32, G).astype(np.int64)
+        q = (rgb >> 3).astype(np.int64)
+        key = np.where(G == 32, 0, (q[..., 0] << 10) | (q[..., 1] << 5) | q[..., 2]) | (G << 15)
+        if self.prev is None or self.prev.shape != key.shape:
+            changed = np.ones(key.shape, bool)
+        else:
+            changed = key != self.prev
+        self.prev = key
+        out, now = [self.BG], None
+        for r in np.nonzero(changed.any(1))[0]:
+            cs = np.nonzero(changed[r])[0]
+            gaps = np.nonzero(np.diff(cs) > 4)[0]                # runs of changed cells (small gaps drawn again)
+            for a, b in zip(np.r_[cs[0], cs[gaps + 1]], np.r_[cs[gaps], cs[-1]]):
+                out.append(f"\x1b[{r + 1};{a + 1}H")
+                for c in range(a, b + 1):
+                    g = G[r, c]
+                    if g != 32:
+                        colour = key[r, c] & 0x7FFF
+                        if colour != now:
+                            out.append(self._colour(colour))
+                            now = colour
+                    out.append(chr(g))
+        if len(out) > 1:
+            self._write("".join(out))
+
+
+def text_row(G, rgb, row, col, text, colour):
+    """Write plain text into a frame."""
+    if 0 <= row < G.shape[0]:
+        text = text[:max(0, G.shape[1] - col)]
+        G[row, col:col + len(text)] = np.frombuffer(text.encode("ascii"), np.uint8)
+        rgb[row, col:col + len(text)] = colour
+
+
+def play_terminal(photo=None):
+    k, col = make_art(photo, grid="fine")
+    with TerminalScreen() as screen:
+        start, size, film = time.perf_counter(), None, None
+        while True:
+            frame = time.perf_counter()
+            keys = "".join(screen.keys())
+            if any(c in keys for c in "qQ\x1b"):
+                break
+            if any(c in keys for c in "rR "):
+                start = time.perf_counter()
+            if screen.size() != size:                         # the terminal changed size: fit him again
+                size = screen.size()
+                cols, rows = size
+                film = TermFilm(*terminal_art(k, col, cols, rows)) if cols >= 24 and rows >= 10 else None
+                screen.clear()
+            t = time.perf_counter() - start
+            if film is None:
+                G, rgb = np.zeros((size[1], size[0]), np.uint8), np.zeros((size[1], size[0], 3), np.uint8)
+                text_row(G, rgb, size[1] // 2, max(0, size[0] // 2 - 12), "Make this terminal bigger", (200, 200, 200))
+            else:
+                G, rgb = film.render(t)
+                if t < 4.0:                                   # how to use it, for the first few seconds
+                    text_row(G, rgb, size[1] - 1, 1, "R = play again   Q = close", (110, 105, 120))
+            screen.draw(G, rgb)
+            time.sleep(max(0.0, 1.0 / 30 - (time.perf_counter() - frame)))
+
+
 # ------------------------------------------------------------------ playing and saving
 GRIDS = {"fine": (CW, CH, ""), "window": (WIN_CW, WIN_CH, "_win")}   # cell size, name in the art file
 
@@ -453,7 +752,7 @@ def window_film(screen_w, screen_h, photo=None):
     return film, r0 * ch, r1 * ch, (int(film.w * scale), int((r1 - r0) * ch * scale))
 
 
-def play(photo=None):
+def play_window(photo=None):
     try:                                                     # sharp pixels on high-DPI Windows screens
         import ctypes
         from ctypes import wintypes
@@ -521,6 +820,7 @@ def save_picture(photo):
 
 def main():
     parser = argparse.ArgumentParser(description="Ronaldo in ASCII - particle edition")
+    parser.add_argument("--window", action="store_true", help="play in a separate window instead of the terminal")
     parser.add_argument("--photo", help=f"work the art out again from this photo (e.g. {PHOTO}) instead of {ART_FILE}")
     parser.add_argument("--save-art", action="store_true", help=f"with --photo: save the art as {ART_FILE}")
     parser.add_argument("--mp4", action="store_true", help=f"save {VIDEO_FILE} (1080x1920, {FPS} fps) instead of playing")
@@ -538,8 +838,10 @@ def main():
         save_video(args.photo, args.seconds)
     elif args.png:
         save_picture(args.photo)
+    elif args.window or not sys.stdout.isatty():               # no terminal to draw in (e.g. IDLE): use a window
+        play_window(args.photo)
     else:
-        play(args.photo)
+        play_terminal(args.photo)
 
 
 if __name__ == "__main__":
