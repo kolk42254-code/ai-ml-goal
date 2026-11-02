@@ -7,7 +7,9 @@ text characters, from his head down to his boots. Every character is chosen from
 the photo: denser characters where it is brighter, line characters ( / \\ | _ ( ) )
 along edges, the photo's own colour, and the name on his shirt in real letters.
 It plays right in the terminal and fills it; it fits itself again whenever the
-terminal changes size. A bigger terminal, or a smaller terminal font, gives more detail.
+terminal changes size. The terminal art is made from the photo in the same way as
+the window's art, in many sizes, and the biggest one that fits is shown. A bigger
+terminal, or a smaller terminal font, gives more detail.
 
 Needs:   pip install numpy opencv-python pillow imageio-ffmpeg
 Files:   ronaldo_art.npz (the finished art) next to this script; that is all it needs
@@ -145,26 +147,29 @@ def load_photo(photo_path, mask_path):
     return rgb, mask.astype(np.float32) / 255.0
 
 
-def place(rgb, alpha):
-    """Scale and centre him on the 1080x1920 picture. Returns the picture, his outline and the transform."""
+def place(rgb, alpha, size=(W, H), scale=None):
+    """Scale and centre him on a picture of this size (pixels), as big as FILL allows or by this scale.
+    Returns the picture, his outline and the transform."""
+    pw, ph = size
     ys, xs = np.nonzero(alpha > 0.5)
     y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
-    s = min(FILL * H / (y1 - y0 + 1), FILL_W * W / (x1 - x0 + 1))
-    M = np.float32([[s, 0, W / 2 - s * (x0 + x1) / 2], [0, s, H / 2 - s * (y0 + y1) / 2]])
-    big = cv2.warpAffine(rgb, M, (W, H), flags=cv2.INTER_LANCZOS4, borderValue=0)
-    a = cv2.warpAffine(alpha, M, (W, H), flags=cv2.INTER_LINEAR, borderValue=0)
+    s = scale or min(FILL * ph / (y1 - y0 + 1), FILL_W * pw / (x1 - x0 + 1))
+    M = np.float32([[s, 0, pw / 2 - s * (x0 + x1) / 2], [0, s, ph / 2 - s * (y0 + y1) / 2]])
+    big = cv2.warpAffine(rgb, M, (pw, ph), flags=cv2.INTER_LANCZOS4, borderValue=0)
+    a = cv2.warpAffine(alpha, M, (pw, ph), flags=cv2.INTER_LINEAR, borderValue=0)
     return np.clip(big, 0.0, 1.0), np.clip(a, 0.0, 1.0), M
 
 
-def convert(rgb, alpha, cw=CW, ch=CH):
-    """Choose a character and a colour for every cell (cells cw x ch pixels of the 1080x1920 picture).
+def convert(rgb, alpha, cw=CW, ch=CH, size=(W, H), scale=None):
+    """Choose a character and a colour for every cell (cells cw x ch pixels of a picture of this size,
+    1080x1920 unless said otherwise; see place() for scale).
 
     The shading of the photo picks a character from RAMP (more ink = brighter). Where the photo has a
     real edge, a character from LINES whose shape lines up with that edge can win instead. Colours are
     the photo's own, a little brightened so thin characters still show them. Returns the character
     numbers (rows x columns, -1 = empty) and colours (sRGB)."""
-    cols, rows = W // cw, H // ch
-    big, a, M = place(rgb, alpha)
+    cols, rows = size[0] // cw, size[1] // ch
+    big, a, M = place(rgb, alpha, size, scale)
     # pixels on his outline are mixed with the stadium behind him: take their colour from just inside
     sure = (a > 0.92).astype(np.float32)
     near = cv2.GaussianBlur(big * sure[..., None], (0, 0), 5.0) / np.maximum(cv2.GaussianBlur(sure, (0, 0), 5.0), 1e-4)[..., None]
@@ -211,6 +216,8 @@ def convert(rgb, alpha, cw=CW, ch=CH):
     hgt, wid = rgb.shape[:2]
     cx0, cx1 = M[0, 0] * x0 * wid + M[0, 2], M[0, 0] * x1 * wid + M[0, 2]
     cy0, cy1 = M[1, 1] * y0 * hgt + M[1, 2], M[1, 1] * y1 * hgt + M[1, 2]
+    if (cx1 - cx0) / cw < 0.8 * len(NAME):                   # too small to write it: the shading shows it
+        return k, col
     r0, r1 = int(cy0 // ch), int(cy1 // ch)
     c0, c1 = int(cx0 // cw), int(cx1 // cw) + 1
     shirt = np.median(col[max(0, r0 - 2), c0:c1], axis=0)
@@ -417,65 +424,61 @@ class Film(Particles):
 
 
 # ------------------------------------------------------------------ playing in the terminal
-LUMA = np.array([0.299, 0.587, 0.114], np.float32)
+TERM_ROWS = tuple(range(16, 64, 2)) + tuple(range(64, 124, 4))   # his height in rows, for each terminal art
 
 
-def terminal_art(k, col, cols, rows):
-    """The art for a terminal of cols x rows characters, made from the fine art. Terminal characters are
-    about twice as tall as wide, like the fine ones, so every terminal character covers a square patch of
-    fine ones. Returns ASCII codes (0 = empty) and sRGB colours (0..1) for every cell."""
-    ink = np.append(build_atlas(CW, CH).mean((1, 2)), 0.0)  # ink of every character (the last one: empty)
-    inside = (k >= 0).astype(np.float64)
-    seen = ink[k] * (0.5 * (col * LUMA).sum(-1) + 0.5 * col.max(-1)) * inside   # how bright each fine cell looks
-    rr, cc = np.nonzero(inside)
-    top, bottom, left, right = rr.min(), rr.max() + 1, cc.min(), cc.max() + 1
-    f = max((right - left) / max(cols - 2, 1), (bottom - top) / max(rows - 2, 1))   # fine cells per terminal cell
-    us = (left + right) / 2 + (np.arange(cols + 1) - cols / 2) * f                # terminal cell edges, in fine cells
-    vs = (top + bottom) / 2 + (np.arange(rows + 1) - rows / 2) * f
+def term_art_cols(rows, fig_w, fig_h):
+    """How many columns the terminal art is when he is `rows` tall (his outline is fig_w x fig_h)."""
+    return int(math.ceil(rows * WIN_CH / fig_h * fig_w / WIN_CW)) + 4
 
-    def box(a):
-        """The sum of a over every terminal cell, worked out exactly from a summed table of a."""
-        a = a.reshape(a.shape[0], a.shape[1], -1)
-        S = np.zeros((a.shape[0] + 1, a.shape[1] + 1, a.shape[2]))
-        S[1:, 1:] = a.cumsum(0).cumsum(1)
-        v, u = np.clip(vs, 0, a.shape[0]), np.clip(us, 0, a.shape[1])
-        v0, u0 = np.minimum(v.astype(int), a.shape[0] - 1), np.minimum(u.astype(int), a.shape[1] - 1)
-        fv, fu = (v - v0)[:, None, None], (u - u0)[None, :, None]
-        I = ((S[v0][:, u0] * (1 - fu) + S[v0][:, u0 + 1] * fu) * (1 - fv)
-             + (S[v0 + 1][:, u0] * (1 - fu) + S[v0 + 1][:, u0 + 1] * fu) * fv)
-        return I[1:, 1:] - I[:-1, 1:] - I[1:, :-1] + I[:-1, :-1]
 
-    there = box(inside)[..., 0]
-    cover = there / (f * f)                                  # how much of each terminal cell is him
-    colour = box(col * inside[..., None]) / np.maximum(there, 1e-9)[..., None]
-    bright = box(seen)[..., 0] / np.maximum(there, 1e-9)
-    on = cover > 0.3
-    if not on.any():
-        return np.zeros((rows, cols), np.uint8), np.zeros((rows, cols, 3), np.float32)
-    lo, hi = np.percentile(bright[on], [2, 99.5])
-    want = 0.30 + 0.70 * np.clip((bright - lo) / max(hi - lo, 1e-9), 0.0, 1.0) ** 0.75
-    ramp = np.array([GLYPHS.index(c) for c in RAMP[1:]])
-    tone = ink[ramp] / ink[ramp].max()
-    pick = np.abs(tone[None, None, :] - want[..., None]).argmin(-1)
-    codes = np.where(on, np.frombuffer(RAMP[1:].encode(), np.uint8)[pick], 0)
-    # along his outline, characters that follow it: _ \ | /
-    gy, gx = np.gradient(cover)
-    gx = gx * 2.0                                            # a column is half as wide as a row is tall
-    along = np.mod(np.degrees(np.arctan2(gy, gx)) + 90.0, 180.0)
-    line = np.select([along < 22.5, along < 67.5, along < 112.5, along < 157.5],
-                     [ord("_"), ord("\\"), ord("|"), ord("/")], ord("_"))
-    codes = np.where(on & (cover < 0.9) & (np.hypot(gx, gy) > 0.25), line, codes).astype(np.uint8)
-    # the name on his shirt, when there is room for it
-    letters = np.isin(k, [GLYPHS.index(c) for c in set(NAME)])
-    if letters.any():
-        lr, lc = np.nonzero(letters)
-        r = int((lr.mean() + 0.5 - vs[0]) // f)
-        c0, c1 = int((lc.min() - us[0]) // f), int((lc.max() + 1 - us[0]) // f)
-        if c1 - c0 + 1 >= len(NAME) and 0 <= r < rows:
-            first = (c0 + c1 + 1) // 2 - len(NAME) // 2
-            codes[r, first:first + len(NAME)] = np.frombuffer(NAME.encode(), np.uint8)
-            colour[r, first:first + len(NAME)] = 0.97
-    return codes, np.clip(colour, 0.0, 1.0).astype(np.float32)
+def term_art(rgb, alpha, rows):
+    """Art for the terminal with him exactly `rows` characters tall (and a row above and below), made in
+    exactly the same way as the window's art: from the photo, with cells of 12 x 24 pixels."""
+    ys, xs = np.nonzero(alpha > 0.5)
+    fig_w, fig_h = xs.max() - xs.min() + 1, ys.max() - ys.min() + 1
+    cols = term_art_cols(rows, fig_w, fig_h)
+    return convert(rgb, alpha, WIN_CW, WIN_CH, size=(cols * WIN_CW, (rows + 2) * WIN_CH), scale=rows * WIN_CH / fig_h)
+
+
+def codes_of(text):
+    """Character codes (0 = blank) of an array of one-character texts."""
+    codes = np.frombuffer(np.ascontiguousarray(text, dtype="<U1").tobytes(), np.uint32).reshape(text.shape)
+    return np.where(codes == 32, 0, codes).astype(np.uint8)
+
+
+class TerminalArts:
+    """The terminal art in many sizes; fit() gives the biggest one that fits a terminal."""
+
+    def __init__(self, photo=None):
+        self.arts = {}
+        if photo:                                             # made from the photo when needed
+            self.rgb, self.alpha = load_photo(photo, os.path.join(HERE, MASK))
+            ys, xs = np.nonzero(self.alpha > 0.5)
+            self.cols = {n: term_art_cols(n, xs.max() - xs.min() + 1, ys.max() - ys.min() + 1) for n in TERM_ROWS}
+            return
+        path = os.path.join(HERE, ART_FILE)
+        if not os.path.exists(path):
+            sys.exit(f"{ART_FILE} should be next to this script (or make it: --photo {PHOTO} --save-art).")
+        with np.load(path) as f:
+            for key in f.files:
+                if key.startswith("term") and key.endswith("_text"):
+                    n = int(key[4:-5])
+                    self.arts[n] = (codes_of(f[key]), f[f"term{n}_col"].astype(np.float32) / 255.0)
+        if not self.arts:
+            sys.exit(f"{ART_FILE} is an older one; make it again with --photo {PHOTO} --save-art.")
+        self.cols = {n: a[0].shape[1] for n, a in self.arts.items()}
+
+    def fit(self, cols, rows):
+        """Character codes and colours of the biggest art that fits cols x rows, or None."""
+        for n in sorted(self.cols, reverse=True):
+            if n + 2 <= rows and self.cols[n] <= cols:
+                if n not in self.arts:
+                    k, col = term_art(self.rgb, self.alpha, n)
+                    text = np.where(k >= 0, np.array(list(GLYPHS))[np.maximum(k, 0)], " ")
+                    self.arts[n] = (codes_of(text), col)
+                return self.arts[n]
+        return None
 
 
 class TermFilm(Particles):
@@ -484,7 +487,7 @@ class TermFilm(Particles):
 
     def __init__(self, codes, colour, seed=SEED):
         self.rows, self.cols = codes.shape
-        self.codes, self.lin = codes, to_linear(colour)
+        self.codes, self.lin = codes, to_linear(colour) * 1.12   # as light, a touch brighter (as in the window)
         self.flicker = np.frombuffer(FLICKER.encode(), np.uint8)
         rng = np.random.default_rng(seed)
         cells = np.argwhere(codes > 0)
@@ -678,7 +681,7 @@ def text_row(G, rgb, row, col, text, colour):
 
 
 def play_terminal(photo=None):
-    k, col = make_art(photo, grid="fine")
+    arts = TerminalArts(photo)
     with TerminalScreen() as screen:
         start, size, film = time.perf_counter(), None, None
         while True:
@@ -691,7 +694,14 @@ def play_terminal(photo=None):
             if screen.size() != size:                         # the terminal changed size: fit him again
                 size = screen.size()
                 cols, rows = size
-                film = TermFilm(*terminal_art(k, col, cols, rows)) if cols >= 24 and rows >= 10 else None
+                art, film = arts.fit(cols, rows), None
+                if art is not None:                           # the art in the middle of the terminal
+                    codes, colour = art
+                    h, w = codes.shape
+                    full, fcol = np.zeros((rows, cols), np.uint8), np.zeros((rows, cols, 3), np.float32)
+                    r0, c0 = (rows - h) // 2, (cols - w) // 2
+                    full[r0:r0 + h, c0:c0 + w], fcol[r0:r0 + h, c0:c0 + w] = codes, colour
+                    film = TermFilm(full, fcol)
                 screen.clear()
             t = time.perf_counter() - start
             if film is None:
@@ -719,10 +729,18 @@ def make_art(photo=None, save=False, grid="fine"):
         rgb, alpha = load_photo(photo, os.path.join(HERE, MASK))
         if save:                                             # characters as text, colours as 0..255
             data = {}
+
+            def keep(name, k, col):
+                data[name + "_text" if name.startswith("term") else "text" + name] = \
+                    np.where(k >= 0, np.array(list(GLYPHS))[np.maximum(k, 0)], " ")
+                data[name + "_col" if name.startswith("term") else "col" + name] = np.round(col * 255.0).astype(np.uint8)
+
             for g, (gw, gh, gk) in GRIDS.items():
-                k, col = convert(rgb, alpha, gw, gh)
-                data["text" + gk] = np.where(k >= 0, np.array(list(GLYPHS))[np.maximum(k, 0)], " ")
-                data["col" + gk] = np.round(col * 255.0).astype(np.uint8)
+                keep(gk, *convert(rgb, alpha, gw, gh))
+            for n in TERM_ROWS:                               # the terminal art, in many sizes
+                keep(f"term{n}", *term_art(rgb, alpha, n))
+                print(f"\rterminal art: {n} rows tall", end="", flush=True)
+            print()
             np.savez_compressed(art, **data)
             print(f"saved {art}")
         return convert(rgb, alpha, cw, ch)
@@ -734,9 +752,10 @@ def make_art(photo=None, save=False, grid="fine"):
         text, col = f["text" + key], f["col" + key]
     if text.shape != (H // ch, W // cw):
         sys.exit(f"{ART_FILE} was made for another size; make it again with --photo {PHOTO} --save-art.")
-    number = {c: i for i, c in enumerate(GLYPHS)}
-    k = np.vectorize(lambda c: -1 if c == " " else number.get(c, -1))(text).astype(np.int32)
-    return k, col.astype(np.float32) / 255.0
+    number = np.full(256, -1, np.int32)                       # character code -> its place in GLYPHS
+    number[np.frombuffer(GLYPHS.encode(), np.uint8)] = np.arange(len(GLYPHS))
+    number[0] = -1
+    return number[codes_of(text)], col.astype(np.float32) / 255.0
 
 
 def window_film(screen_w, screen_h, photo=None):
