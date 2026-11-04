@@ -57,7 +57,7 @@ pip install datasets huggingface_hub safetensors matplotlib notebook
 jupyter notebook Projects_by_AI/image-ai/level1_diffusion_from_scratch.ipynb
 ```
 
-In Part 1 of the notebook, switch on the smaller CPU settings.
+In Part 1 of the notebook, switch on the smaller CPU settings. On a 4-core cloud CPU they trained in about 10 minutes and drew readable but rough digits; generating the images took several more minutes.
 
 ## Skills this project previews
 
