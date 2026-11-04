@@ -19,6 +19,7 @@ My journey learning **Python, AI and Machine Learning**: practice programs, smal
 | [Eye_animation](Projects_by_AI/Eye_animation) | Eye animations with a menu (`Eye_animation.py`): eye with heart, eye blinking, and eye-to-space ASCII art |
 | [wizard-chess-3d](Projects_by_AI/wizard-chess-3d) | Wizard Chess 3D: a 3D chess game in the browser with a computer opponent (made in Google AI Studio) |
 | [shop-bot-old](Projects_by_AI/shop-bot-old) | An older version of the shop bot, kept for reference |
+| [image-ai](Projects_by_AI/image-ai) | Image AI from scratch, Level 1: a small diffusion model (PyTorch + Hugging Face) that learns from real images and draws new ones. Runs free on Google Colab (made with Claude) |
 
 ## How to run
 
@@ -39,3 +40,5 @@ python Projects_by_AI/Eye_animation/Eye_animation.py
 Shop website: follow [shop-bot/README.md](shop-bot/README.md).
 
 Wizard Chess 3D: follow [its README](Projects_by_AI/wizard-chess-3d/README.md) (it needs Node.js).
+
+Image AI: open the notebook in Google Colab; follow [its README](Projects_by_AI/image-ai/README.md).
