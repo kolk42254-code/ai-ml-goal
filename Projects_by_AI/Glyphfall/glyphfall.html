@@ -16,7 +16,7 @@
   --muted: #9d94b4;        /* secondary text */
   --ember: #ffb15e;        /* the spark: particles, active controls */
   --ember-deep: #e2742e;   /* the spark's shadow side */
-  --stage: #07060b;        /* behind the art */
+  --stage: #000;           /* behind the art: the same black the letters are drawn on */
   --paper: #efe7d8;        /* the Paper look */
   --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --body: "Manrope", "Segoe UI", system-ui, sans-serif;
@@ -104,6 +104,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .tool:hover { border-color: var(--ember); color: var(--fg) }
 .tool[aria-pressed="true"] { border-color: var(--ember); color: var(--ember) }
 .tool:disabled { opacity: .5; cursor: progress }
+@media (max-width: 480px) { .tools { gap: 5px } .tool { padding: 6px 8px; font-size: 11.5px; gap: 4px } }
 .hint { top: 12px; right: 12px; pointer-events: none; transition: opacity .6s; z-index: 2 }
 .meta { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; justify-content: space-between; gap: 10px; pointer-events: none }
 .meta .chip { position: static }
@@ -178,6 +179,22 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
   background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); padding: 10px 16px; border-radius: 12px;
   font-size: 13.5px; width: max-content; max-width: calc(100vw - 32px); box-shadow: 0 20px 50px -20px #000;
 }
+/* ---- the new extras: camera, colour themes, sharing, the slider (all off until used) ---- */
+.camera-btn { width: 100% }
+.camera-btn[aria-pressed="true"] { border-color: var(--ember); color: var(--ember) }
+@media (max-width: 960px) { .camera-btn { order: 2 } }
+.seg .sw { width: 11px; height: 11px; border-radius: 50%; background: var(--c, #58c4ff); box-shadow: 0 0 9px var(--c, #58c4ff); justify-self: center }
+.pickc { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted) }
+.pickc input { width: 52px; height: 32px; padding: 2px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); cursor: pointer }
+.share-menu { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px }
+.share-menu .btn { font-size: 12.5px; padding: 9px 6px }
+.ready { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 61;
+  display: flex; align-items: center; gap: 10px; background: var(--panel-2); border: 1px solid var(--ember); color: var(--fg);
+  padding: 8px 8px 8px 14px; border-radius: 14px; font-size: 13.5px; box-shadow: 0 20px 50px -20px #000; max-width: calc(100vw - 32px) }
+.ready button { font: 600 13px var(--body); border-radius: 10px; padding: 8px 12px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--fg) }
+.ready button.go { background: linear-gradient(180deg, var(--ember), var(--ember-deep)); color: #1a0d03; border-color: transparent }
+.stage.sliding canvas { cursor: ew-resize }
+.camvideo { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; left: 0; top: 0 }
 @media (prefers-reduced-motion: reduce) { .pick, .seg button { transition: none } .spin { animation-duration: 3s } }
 </style>
 
@@ -201,6 +218,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
         <small id="pick-sub">or click to choose one · you can paste one too</small>
         <span class="cta" id="pick-cta" hidden>Choose a photo</span>
       </div>
+      <button type="button" class="btn camera-btn" id="camera" aria-pressed="false">Live camera<small>see yourself as ASCII art, live</small></button>
 
       <aside class="panel" aria-label="Settings">
         <div class="group">
@@ -226,10 +244,30 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
         <div class="group">
           <span class="label">Look</span>
           <div class="seg c2" id="look">
-            <button type="button" data-v="true">Photo-true<small>on its own colour</small></button>
-            <button type="button" data-v="glow">Glow<small>colour on dark</small></button>
+            <button type="button" data-v="true">Photo-true<small>its own colours</small></button>
+            <button type="button" data-v="glow">Glow<small>letters that shine</small></button>
             <button type="button" data-v="mono">Mono<small>black &amp; white</small></button>
             <button type="button" data-v="paper">Paper<small>ink on paper</small></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <span class="label">Colour</span>
+          <div class="seg" id="theme">
+            <button type="button" data-v="off">Original<small>picture's own</small></button>
+            <button type="button" data-v="matrix"><span class="sw" style="--c:#00ff41"></span>Matrix<small>green</small></button>
+            <button type="button" data-v="amber"><span class="sw" style="--c:#ffb000"></span>Amber<small>terminal</small></button>
+            <button type="button" data-v="pink"><span class="sw" style="--c:#ff3fb4"></span>Neon pink<small>glow</small></button>
+            <button type="button" data-v="custom"><span class="sw" id="theme-sw" style="--c:#58c4ff"></span>Your colour<small id="theme-hex">#58c4ff</small></button>
+          </div>
+          <label class="pickc" id="theme-row" hidden>Choose your colour <input type="color" id="theme-color" value="#58c4ff"></label>
+        </div>
+
+        <div class="group">
+          <span class="label">Background</span>
+          <div class="seg c2" id="cut">
+            <button type="button" data-v="keep">Keep it all<small>the whole picture</small></button>
+            <button type="button" data-v="cut">Cut out the person<small>dark background</small></button>
           </div>
         </div>
 
@@ -268,6 +306,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
             <button type="button" class="btn primary" id="save-video">Save video<small>MP4 of the formation</small></button>
             <button type="button" class="btn" id="save-image">Save image<small>PNG, full size</small></button>
             <button type="button" class="btn" id="save-text">Save text<small>.txt file</small></button>
+            <button type="button" class="btn" id="save-gif">Save GIF<small>small, for sharing</small></button>
+            <button type="button" class="btn" id="share" aria-expanded="false" aria-controls="share-menu">Share…<small>WhatsApp, Instagram…</small></button>
+          </div>
+          <div class="share-menu" id="share-menu" hidden>
+            <button type="button" class="btn" data-v="png">Picture<small>PNG</small></button>
+            <button type="button" class="btn" data-v="gif">GIF<small>animated</small></button>
+            <button type="button" class="btn" data-v="mp4">Video<small>MP4</small></button>
           </div>
           <p class="note" id="save-note" hidden>Saving files isn't available in this view. Open the page in claude.ai or in your browser to save.</p>
         </div>
@@ -281,14 +326,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
 
     <div class="stage" id="stage">
       <canvas id="view" aria-label="Your picture as ASCII art"></canvas>
+      <video id="cam" class="camvideo" playsinline muted aria-hidden="true"></video>
       <div class="tools">
         <button type="button" class="chip tool" id="replay" title="Play the formation again (R)">↻ Replay</button>
         <button type="button" class="chip tool" id="peek" aria-pressed="false" title="Tap to see your picture, tap again to go back (or hold)"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1.7a6.3 6.3 0 0 1 0 12.6z" fill="currentColor"/></svg>Compare</button>
+        <button type="button" class="chip tool" id="slider" aria-pressed="false" title="Drag the line: your picture on one side, the art on the other">⇆ Slider</button>
+        <button type="button" class="chip tool" id="snap" hidden>● Snapshot</button>
+        <button type="button" class="chip tool" id="flip" hidden>⟲ Flip camera</button>
+        <button type="button" class="chip tool" id="cam-stop" hidden>✕ Stop camera</button>
         <button type="button" class="chip tool" id="full" title="Full screen (F)" hidden>⤢ Full screen</button>
       </div>
       <div class="chip hint" id="hint" hidden>Move over the picture · click for a ripple</div>
       <div class="meta"><span class="chip" id="m-grid">—</span><span class="chip" id="m-name">sample: sunset</span></div>
-      <div class="busy" id="busy" hidden><span class="spin"></span><span>MAKING THE CHARACTERS…</span></div>
+      <div class="busy" id="busy" hidden><span class="spin"></span><span id="busy-text">MAKING THE CHARACTERS…</span></div>
       <div class="export" id="export" hidden>
         <span id="export-text">MAKING YOUR VIDEO · 0%</span>
         <div class="bar"><i id="export-bar"></i></div>
@@ -300,12 +350,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
   <section class="how">
     <div><h3>Shading</h3><p>Each spot's brightness picks one of 70 shades made of letters, numbers and symbols, from <code>$ @ B % 8 &amp; W M</code> for the brightest to <code>^ " ~ ! ; _ :</code> for the darkest (on Paper the other way round).</p></div>
     <div><h3>Shape</h3><p>Where a spot holds an edge, the character whose own shape lines up with it wins, from all 95 on your keyboard: <code>/ \ | _ ( ) [ ] { } &lt; &gt; L J 7 V</code></p></div>
-    <div><h3>Colour</h3><p>Each character is coloured and sits on a dimmer shade of the same colour (on Paper: dark ink on lightly shaded paper), mixed so that every spot shows exactly the colour of your picture there.</p></div>
+    <div><h3>Colour</h3><p>Only the characters are drawn, nothing behind them: each one takes the colour of your picture at its spot, just as bright as it needs to be (on Paper: dark ink on plain paper).</p></div>
   </section>
 </div>
 
 <div class="overlay" id="overlay" hidden>Drop to make it rain</div>
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="ready" id="ready" hidden><span id="ready-text">Ready</span><button type="button" class="go" id="ready-share">Share</button><button type="button" id="ready-close" aria-label="Close">✕</button></div>
 
 <script>
 (() => {
@@ -321,9 +372,6 @@ const SIZE_STEP = { small: 1, medium: 1.6, big: 2.5 };   // letter sizes, as par
 const COHERENT = 0.3;                                // how well a character's shape must match an edge to be used for it
 const SPEED = { quick: 3.2, normal: 5.6, slow: 8.8 };   // seconds the formation takes
 const T_START = 0.6, FLY = [1.0, 1.9], HOLD = 2.6, FPS = 30;
-const TINT = 0.40;                                   // a character's background, as a part of its colour
-const HALO = 0.12;                                   // Glow and Mono: the faint light behind a character, as a part of its cell's light
-const SHADE = 0.40;                                  // Paper: how much of a cell's darkness the paper round its character takes
 const PAPER = [0.863, 0.799, 0.687];                 // the Paper look's paper, as light
 const FONT = "'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace";
 const MUXER = "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js";
@@ -334,17 +382,18 @@ const narrow = () => matchMedia("(max-width: 960px)").matches;
 
 const $ = id => document.getElementById(id);
 const view = $("view"), ctx = view.getContext("2d");
-const DEFAULTS = { size: "medium", chars: "every", words: "", look: "true", way: "down", speed: "normal", bright: 0, contrast: 0 };
+const DEFAULTS = { size: "medium", chars: "every", words: "", look: "true", way: "down", speed: "normal", bright: 0, contrast: 0, theme: "off", themeColor: "#58c4ff", cut: "keep" };
 const OPTIONS = { size: ["small", "medium", "big"], chars: ["every", "alnum", "classic", "words"], look: ["true", "glow", "mono", "paper"],
-                  way: ["down", "up", "out", "outline", "type", "sparkle"], speed: ["quick", "normal", "slow"] };
+                  way: ["down", "up", "out", "outline", "type", "sparkle"], speed: ["quick", "normal", "slow"], theme: ["off", "matrix", "amber", "pink", "custom"] };
 const state = { img: null, name: "sample: sunset", ...DEFAULTS };
 try {
   const old = JSON.parse(localStorage.getItem("glyphfall:v2") || "{}");
   for (const k in OPTIONS) if (OPTIONS[k].includes(old[k])) state[k] = old[k];
   for (const k of ["bright", "contrast"]) if (Number.isFinite(old[k])) state[k] = Math.max(-50, Math.min(50, Math.round(old[k])));
   if (typeof old.words === "string") state.words = old.words.slice(0, 40);
+  if (/^#[0-9a-f]{6}$/i.test(old.themeColor || "")) state.themeColor = old.themeColor.toLowerCase();
 } catch (e) {}
-const saveSettings = () => { try { const { img, name, ...s } = state; localStorage.setItem("glyphfall:v2", JSON.stringify(s)) } catch (e) {} };
+const saveSettings = () => { try { const { img, name, cut: _c, ...s } = state; localStorage.setItem("glyphfall:v2", JSON.stringify(s)) } catch (e) {} };   // the cut-out starts off each visit
 
 const LIN = new Float32Array(256);
 for (let i = 0; i < 256; i++) { const c = i / 255; LIN[i] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
@@ -492,70 +541,152 @@ function wordCodes() {
 }
 const arts = new Map();
 async function makeArt(cols, rows) {
-  const paper = state.look === "paper";
-  const key = [cols, rows, state.chars, state.chars === "words" ? state.words : "", paper, state.bright, state.contrast].join("|");
+  const paper = state.look === "paper", src = srcImg(), isCut = src !== state.img;
+  const key = [cols, rows, state.chars, state.chars === "words" ? state.words : "", paper, state.bright, state.contrast, isCut ? "cut" : ""].join("|");
   if (arts.has(key)) return arts.get(key);
   const ramp = new Uint8Array(ALL.length), allow = new Uint8Array(ALL.length);
   const [r, a] = SETS[state.chars] || SETS.every;
   for (const ch of r) ramp[ch.charCodeAt(0) - 32] = 1;
   for (const ch of a) allow[ch.charCodeAt(0) - 32] = 1;
   const words = state.chars === "words" ? wordCodes() : null;
-  const px = pixels(state.img, cols * AW, rows * AH, paper ? "#fff" : "#000");
+  const px = pixels(src, cols * AW, rows * AH, paper ? "#fff" : "#000");
   const out = await runConvert({ px, cols, rows, paper, ramp, allow, words: words && words.slice(), coherent: COHERENT,
     bright: state.bright / 100, contrast: Math.pow(2, state.contrast / 50) });
   const rampList = words ? [...new Set(words)] : ALL.map((_, g) => g).filter(g => ramp[g]);
-  const art = { cols, rows, glyph: out.glyph, lin: out.lin, edge: out.edge, rampList };
+  let keep = null;                                   // a cut-out: which spots belong to the person
+  if (isCut) {
+    const c = document.createElement("canvas"); c.width = cols; c.height = rows;
+    const x = c.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, cols, rows);
+    const d = x.getImageData(0, 0, cols, rows).data; keep = new Uint8Array(cols * rows);
+    for (let i = 0; i < keep.length; i++) keep[i] = d[i * 4 + 3] > 6 ? 1 : 0;
+  }
+  const art = { cols, rows, glyph: out.glyph, lin: out.lin, edge: out.edge, rampList, cut: isCut, keep };
   if (arts.size > 24) arts.clear();
   arts.set(key, art); return art;
 }
 
 // ------------------------------------------------------------------ colours and the finished art
-// Every character cell gets a colour for its character and one for its background, so that the cell, seen
-// as a whole, is exactly the picture's own light (Mono: its brightness; Paper: printed on this paper).
-// All in linear light. The background takes a fixed part of the cell's light and the character the rest;
-// where a character can't get any brighter (or, on paper, any darker), its background makes up the rest.
-function colours(art, look, ink) {
-  const N = art.cols * art.rows, L = art.lin, fore = new Float32Array(N * 3), back = new Float32Array(N * 3);
-  const mono = look === "mono", paper = look === "paper", share = look === "true" ? TINT : paper ? SHADE : HALO;
+// Only the characters are drawn, on one plain background (no boxes). Each character gets the colour that makes
+// its spot, seen as a whole, show the picture's own light (Mono: its brightness), every spot scaled by the same
+// amount so that almost no character would have to be brighter than white. Paper: dark ink letters on plain
+// paper, as dark as the picture is there. A colour theme gives every letter one colour, as bright as the
+// picture's brightness there (on Paper: a dark ink of that colour). Worked out in linear light, so character
+// and background mix exactly.
+const DARK = [0, 0, 0];
+const THEMES = { matrix: "#00ff41", amber: "#ffb000", pink: "#ff3fb4" };
+function themeRGB() {                                // the theme's colour as light, brightest channel 1; null: the picture's own colours
+  if (!state.theme || state.theme === "off") return null;
+  const hex = state.theme === "custom" ? state.themeColor : THEMES[state.theme];
+  const n = parseInt(String(hex).slice(1), 16);
+  if (!Number.isFinite(n)) return null;
+  const c = [LIN[(n >> 16) & 255], LIN[(n >> 8) & 255], LIN[n & 255]], m = Math.max(c[0], c[1], c[2]);
+  return m > 0.002 ? c.map(v => v / m) : [1, 1, 1];  // black would hide every letter: white instead
+}
+const lum = (a, j) => 0.2126 * a[j] + 0.7152 * a[j + 1] + 0.0722 * a[j + 2];
+const PAPER_Y = lum(PAPER, 0);
+function colourPlan(art, look, ink, theme) {         // what every spot should be, before one overall scale
+  const N = art.cols * art.rows, L = art.lin, want = new Float32Array(N * 3), ratios = [];
+  const paper = look === "paper", mono = look === "mono" || !!theme;
+  const inkC = paper && theme ? theme.map(v => v * 0.3) : null, inkY = inkC ? lum(inkC, 0) : 0;
   for (let i = 0; i < N; i++) {
-    const cv = ink[art.glyph[i]], j = i * 3, y = mono ? 0.2126 * L[j] + 0.7152 * L[j + 1] + 0.0722 * L[j + 2] : 0;
+    const j = i * 3, cv = ink[art.glyph[i]], y = mono ? lum(L, j) : 0;
+    if (inkC) {                                      // themed paper: one ink, as dark as the picture is
+      const D = 1 - toS(y) / 255; want[j] = D;
+      if (D > 0.02) ratios.push(cv * (PAPER_Y - inkY) / (PAPER_Y * D));
+      continue;
+    }
+    let mx = 0;
     for (let k = 0; k < 3; k++) {
-      const v = mono ? y : L[j + k];
-      let f, b, top = 1;
-      if (paper) {                                   // dark ink on paper that is shaded a little round it
-        const P = PAPER[k], t = P * v; top = P;
-        b = P - share * (P - t); f = cv > 1e-4 ? (t - b * (1 - cv)) / cv : P;
-        if (cv <= 1e-4) b = t; else if (f < 0) { f = 0; b = t / (1 - cv) }
-      } else {                                       // a lit character on a dimmer background of its own colour
-        b = v * share; f = cv > 1e-4 ? (v - b * (1 - cv)) / cv : v;
-        if (cv <= 1e-4) b = v; else if (f > 1) { f = 1; b = (v - cv) / (1 - cv) }
-      }
-      fore[j + k] = f < 0 ? 0 : f > top ? top : f; back[j + k] = b < 0 ? 0 : b > top ? top : b;
+      const v = paper ? 1 - toS(L[j + k]) / 255 : mono ? y * (theme ? theme[k] : 1) : L[j + k];   // on paper: how dark the print is there
+      want[j + k] = v; if (v > mx) mx = v;
+    }
+    if (mx > (paper ? 0.02 : 0.004)) ratios.push(cv / mx);
+  }
+  ratios.sort((a, b) => a - b);
+  const gain = Math.min(1, ratios.length ? ratios[Math.floor((ratios.length - 1) * 0.005)] : 1);
+  return { want, gain, inkC, inkY };
+}
+function colourFill(art, look, ink, plan, gain) {
+  const N = art.cols * art.rows, fore = new Float32Array(N * 3), paper = look === "paper", back = paper ? PAPER : DARK, { want, inkC, inkY } = plan;
+  for (let i = 0; i < N; i++) {
+    const j = i * 3, cv = ink[art.glyph[i]];
+    if (inkC) {
+      const a = cv > 1e-4 ? Math.min(1, PAPER_Y * gain * want[j] / (cv * (PAPER_Y - inkY))) : 0;
+      for (let k = 0; k < 3; k++) fore[j + k] = PAPER[k] + a * (inkC[k] - PAPER[k]);
+      continue;
+    }
+    for (let k = 0; k < 3; k++) {
+      const b = back[k], t = paper ? b * (1 - gain * want[j + k]) : gain * want[j + k];
+      const f = cv > 1e-4 ? (t - b * (1 - cv)) / cv : b;
+      fore[j + k] = paper ? (f < 0 ? 0 : f > b ? b : f) : (f < b ? b : f > 1 ? 1 : f);
     }
   }
   return { fore, back };
 }
+function colours(art, look, ink, theme = null) {
+  const plan = colourPlan(art, look, ink, theme), c = colourFill(art, look, ink, plan, plan.gain);
+  return { fore: c.fore, back: c.back, gain: plan.gain };
+}
 const ENC = new Uint8Array(4096);                    // linear light -> sRGB levels
 for (let i = 0; i < 4096; i++) ENC[i] = toS(i / 4095);
-function renderArt(art, look, cw) {
-  // characters are mixed with their backgrounds in linear light, pixel by pixel, so every cell's average is exact
-  const ch = cw * 2, W = art.cols * cw, H = art.rows * ch, ga = glyphAlpha(cw, ch), n = ga.n, A = ga.a;
-  const { fore, back } = colours(art, look, ga.ink);
-  const img = new ImageData(W, H), px = img.data;
+const LITTLE = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
+function paintLetters(art, cw, ga, fore, back, img) {
+  // only the characters, mixed with the one plain background in linear light, pixel by pixel
+  const ch = cw * 2, W = art.cols * cw, n = ga.n, A = ga.a;
+  const px = img.data, p32 = new Uint32Array(px.buffer, px.byteOffset, px.length >> 2), b0 = back[0] * 4095, b1 = back[1] * 4095, b2 = back[2] * 4095;
+  const s0 = ENC[(b0 + 0.5) | 0], s1 = ENC[(b1 + 0.5) | 0], s2 = ENC[(b2 + 0.5) | 0];
+  const BG = LITTLE ? ((255 << 24) | (s2 << 16) | (s1 << 8) | s0) >>> 0 : ((s0 << 24) | (s1 << 16) | (s2 << 8) | 255) >>> 0;   // a spot with no ink: just the background
   for (let r = 0; r < art.rows; r++) for (let q = 0; q < art.cols; q++) {
     const i = r * art.cols + q, base = art.glyph[i] * n, j = i * 3;
-    const b0 = back[j] * 4095, b1 = back[j + 1] * 4095, b2 = back[j + 2] * 4095;
     const d0 = fore[j] * 4095 - b0, d1 = fore[j + 1] * 4095 - b1, d2 = fore[j + 2] * 4095 - b2;
     for (let y = 0; y < ch; y++) {
       let o = ((r * ch + y) * W + q * cw) * 4; const ai = base + y * cw;
       for (let x = 0; x < cw; x++, o += 4) {
         const al = A[ai + x];
+        if (al === 0) { p32[o >> 2] = BG; continue }
         px[o] = ENC[(b0 + d0 * al + 0.5) | 0]; px[o + 1] = ENC[(b1 + d1 * al + 0.5) | 0]; px[o + 2] = ENC[(b2 + d2 * al + 0.5) | 0]; px[o + 3] = 255;
       }
     }
   }
+  return img;
+}
+function renderArt(art, look, cw, theme = themeRGB()) {
+  const ch = cw * 2, W = art.cols * cw, H = art.rows * ch, ga = glyphAlpha(cw, ch);
+  const { fore, back } = colours(art, look, ga.ink, theme);
+  const img = paintLetters(art, cw, ga, fore, back, new ImageData(W, H));
   const c = document.createElement("canvas"); c.width = W; c.height = H; c.getContext("2d").putImageData(img, 0, 0);
   return c;
+}
+// the characters alone, in one colour, on nothing: for lighting up the letters themselves (never their boxes)
+function renderMask(art, cw, rgb) {
+  const ch = cw * 2, W = art.cols * cw, H = art.rows * ch, ga = glyphAlpha(cw, ch), n = ga.n, A = ga.a;
+  const img = new ImageData(W, H), px = img.data;
+  for (let r = 0; r < art.rows; r++) for (let q = 0; q < art.cols; q++) {
+    const i = r * art.cols + q, base = art.glyph[i] * n;
+    if (art.keep && !art.keep[i]) continue;          // a cut-out's empty background never lights up
+    for (let y = 0; y < ch; y++) {
+      let o = ((r * ch + y) * W + q * cw) * 4; const ai = base + y * cw;
+      for (let x = 0; x < cw; x++, o += 4) { px[o] = rgb[0]; px[o + 1] = rgb[1]; px[o + 2] = rgb[2]; px[o + 3] = (A[ai + x] * 255 + 0.5) | 0 }
+    }
+  }
+  const c = document.createElement("canvas"); c.width = W; c.height = H; c.getContext("2d").putImageData(img, 0, 0);
+  return c;
+}
+// Glow: a soft light round the characters, made from the characters themselves (small blurred copies)
+function bloomOf(src, w, h, pad, reuse) {
+  const mk = (s, old) => { const cw = Math.max(1, Math.round((w + 2 * pad) / s)), chh = Math.max(1, Math.round((h + 2 * pad) / s));
+    if (old && old.width === cw && old.height === chh) { old.getContext("2d").clearRect(0, 0, cw, chh); return old }
+    const c = document.createElement("canvas"); c.width = cw; c.height = chh; return c };
+  const a = mk(4, reuse && reuse[0]), b = mk(10, reuse && reuse[1]), ax = a.getContext("2d"), bx = b.getContext("2d");
+  ax.imageSmoothingQuality = "high"; ax.drawImage(src, pad / 4, pad / 4, w / 4, h / 4);
+  bx.imageSmoothingQuality = "high"; bx.drawImage(a, 0, 0, b.width, b.height);
+  return [a, b];
+}
+function drawBloom(x, bl, X, Y, w, h, pad) {
+  x.save(); x.globalCompositeOperation = "lighter"; x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
+  x.globalAlpha = 0.5; x.drawImage(bl[0], X - pad, Y - pad, w + 2 * pad, h + 2 * pad);
+  x.globalAlpha = 0.45; x.drawImage(bl[1], X - pad, Y - pad, w + 2 * pad, h + 2 * pad);
+  x.restore();
 }
 
 // ------------------------------------------------------------------ the formation
@@ -568,9 +699,11 @@ function sprite(size, rgb, core, paper) {
 }
 function makeFilm(art, look, cw, W, H, ox, oy, opt = {}) {
   const ch = cw * 2, cols = art.cols, rows = art.rows, N = cols * rows, paper = look === "paper";
-  const artC = renderArt(art, look, cw);
+  const theme = opt.theme !== undefined ? opt.theme : themeRGB(), tint = (k, a) => theme.map(v => toS(a + (1 - a) * v * k));
+  const artC = renderArt(art, look, cw, theme);
   const done = document.createElement("canvas"); done.width = artC.width; done.height = artC.height;
   const dctx = done.getContext("2d"); dctx.fillStyle = paper ? "#efe7d8" : "#000"; dctx.fillRect(0, 0, done.width, done.height);
+  const mask = renderMask(art, cw, paper ? [196, 88, 28] : theme ? tint(1, 0.45) : [255, 226, 190]);   // the letters, for their flashes and lights
   // when every character lands
   const build = SPEED[opt.speed || state.speed] || SPEED.normal, way = opt.way || state.way;
   const land = new Float32Array(N), cx = cols / 2, cy = rows / 2, far = Math.hypot(cx, cy * 2);
@@ -594,6 +727,10 @@ function makeFilm(art, look, cw, W, H, ox, oy, opt = {}) {
     const q0 = j * per, q1 = Math.min(cols, q0 + per);
     let a = Infinity; for (let q = q0; q < q1; q++) a = Math.min(a, land[r * cols + q]);
     for (let q = q0; q < q1; q++) land[r * cols + q] = a;
+    if (art.keep) {                                  // a cut-out's empty background gets no sparks: there is nothing there to build
+      let seen = false; for (let q = q0; q < q1 && !seen; q++) if (art.keep[r * cols + q]) seen = true;
+      if (!seen) { p.arrive[k] = -1; continue }
+    }
     const tx = ox + (q0 + q1) / 2 * cw, ty = oy + (r + 0.5) * ch;
     p.to[k * 2] = tx; p.to[k * 2 + 1] = ty; p.arrive[k] = a; p.fly[k] = FLY[0] + Math.random() * (FLY[1] - FLY[0]);
     let sx, sy, vy;
@@ -609,16 +746,30 @@ function makeFilm(art, look, cw, W, H, ox, oy, opt = {}) {
   }
   const order = Uint32Array.from({ length: N }, (_, i) => i).sort((a, b) => land[a] - land[b]);
   const ds = Math.max(8, Math.round(Math.min(cw * 2.6, 0.03 * Math.min(W, H))));   // a spark's glow, never too big to draw quickly
-  const dot = paper ? sprite(ds, [90, 52, 30], 0, true) : sprite(ds, [255, 168, 92], 0.7);
-  const hot = paper ? sprite(ds, [150, 60, 20], 0, true) : sprite(ds, [255, 214, 160], 1);
-  return { art, look, paper, cols, rows, cw, ch, W, H, ox, oy, artC, done, dctx, land, order, next: 0, p, P, dot, hot, ds,
-           end: T_START + build + 0.4, bg: paper ? "#e9e1d1" : "#07060b" };
+  const dot = paper ? sprite(ds, [90, 52, 30], 0, true) : sprite(ds, theme ? tint(1, 0.15) : [255, 168, 92], 0.7);
+  const hot = paper ? sprite(ds, [150, 60, 20], 0, true) : sprite(ds, theme ? tint(1, 0.5) : [255, 214, 160], 1);
+  return { art, look, paper, cols, rows, cw, ch, W, H, ox, oy, artC, done, dctx, mask, land, order, next: 0, p, P, dot, hot, ds,
+           end: T_START + build + 0.4, bg: paper ? "#efe7d8" : "#000", glow: look === "glow", bl: null, blAt: -1, tmp: null };
 }
 function driftAt(p, k, t) {
   const o = k * 5, sw = p.drift[o + 4], ph = p.drift[o + 3];
   return [p.drift[o] + sw * Math.sin(t * 0.6 + ph), p.drift[o + 1] + p.drift[o + 2] * t + 0.6 * sw * Math.cos(t * 0.45 + ph)];
 }
 function finish(f) { f.dctx.drawImage(f.artC, 0, 0); f.next = f.order.length }
+function scratch(f, w, h) {                         // a spare canvas for lighting letters through a soft shape
+  if (!f.tmp || f.tmp.canvas.width < w || f.tmp.canvas.height < h) {
+    const c = document.createElement("canvas"); c.width = Math.max(w, f.tmp ? f.tmp.canvas.width : 0); c.height = Math.max(h, f.tmp ? f.tmp.canvas.height : 0); f.tmp = c.getContext("2d");
+  }
+  return f.tmp;
+}
+function lightLetters(f, x, X0, Y0, w, h, paint) {  // the letters in this part of the art, lit through a soft shape
+  const t = scratch(f, w, h);
+  t.globalCompositeOperation = "source-over"; t.globalAlpha = 1; t.clearRect(0, 0, w, h);
+  t.drawImage(f.mask, X0, Y0, w, h, 0, 0, w, h);
+  t.globalCompositeOperation = "destination-in"; t.fillStyle = paint(t); t.fillRect(0, 0, w, h);
+  x.globalCompositeOperation = f.paper ? "source-over" : "lighter"; x.globalAlpha = 1;
+  x.drawImage(t.canvas, 0, 0, w, h, f.ox + X0, f.oy + Y0, w, h);
+}
 
 function drawFilm(f, x, t, fx) {
   const { cw, ch, ox, oy, cols } = f;
@@ -629,13 +780,20 @@ function drawFilm(f, x, t, fx) {
   x.globalCompositeOperation = "source-over"; x.globalAlpha = 1;
   x.fillStyle = f.bg; x.fillRect(0, 0, f.W, f.H);
   x.drawImage(f.done, ox, oy);
-  x.globalCompositeOperation = f.paper ? "multiply" : "lighter";
-  for (let j = f.next - 1; j >= 0; j--) {                                // the newest glow white-hot and cool down
+  const aw = cols * cw, ah = f.rows * ch;
+  if (f.glow) {                                                          // Glow: soft light round the letters
+    const pad = Math.round(0.06 * Math.max(aw, ah));
+    if (f.blAt !== f.next) { f.bl = bloomOf(f.done, aw, ah, pad, f.bl); f.blAt = f.next }
+    drawBloom(x, f.bl, ox, oy, aw, ah, pad);
+  }
+  x.globalCompositeOperation = f.paper ? "source-over" : "lighter";
+  for (let j = f.next - 1; j >= 0; j--) {                                // the newest letters glow white-hot and cool down
     const i = f.order[j], age = t - f.land[i]; if (age > 0.35) break;
     const k = (1 - age / 0.35) ** 2, r = (i / cols) | 0, q = i - r * cols;
-    x.fillStyle = f.paper ? `rgba(235,140,70,${0.6 * k})` : `rgba(255,${170 + 60 * k | 0},${110 + 90 * k | 0},${0.5 * k})`;
-    x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
+    x.globalAlpha = (f.paper ? 0.6 : 0.85) * k;
+    x.drawImage(f.mask, q * cw, r * ch, cw, ch, ox + q * cw, oy + r * ch, cw, ch);
   }
+  x.globalAlpha = 1; x.globalCompositeOperation = f.paper ? "multiply" : "lighter";
   const fade = Math.min(1, t / 0.9), p = f.p, sz = f.ds;
   for (let k = 0; k < f.P; k++) {
     const arrive = p.arrive[k]; if (t >= arrive) continue;
@@ -658,7 +816,7 @@ function drawFilm(f, x, t, fx) {
   x.globalAlpha = 1;
   const st = (t - f.end - 0.1) / 1.4;                                    // a soft light sweeps over the finished picture
   if (st > 0 && st < 1 && !f.paper) {
-    const aw = cols * cw, ah = f.rows * ch, span = aw + ah, w = span * 0.03, mid = -0.12 * span + st * 1.24 * span;
+    const span = aw + ah, w = span * 0.03, mid = -0.12 * span + st * 1.24 * span;
     for (let s = -3; s <= 3; s++) {
       const c0 = mid + s * w - w / 2;
       x.save(); x.beginPath();
@@ -668,34 +826,35 @@ function drawFilm(f, x, t, fx) {
     }
   }
   if (fx) {
-    if (fx.pointer && fx.pointer.on) {                                   // the torch: characters under the pointer light up
-      const R = Math.max(5, 90 * fx.dpr / cw), pc = (fx.pointer.x - ox) / cw, pr = (fx.pointer.y - oy) / ch;
-      for (let r = Math.max(0, Math.floor(pr - R / 2)); r <= Math.min(f.rows - 1, Math.ceil(pr + R / 2)); r++)
-        for (let q = Math.max(0, Math.floor(pc - R)); q <= Math.min(cols - 1, Math.ceil(pc + R)); q++) {
-          const d = Math.hypot((q + 0.5 - pc) / R, (r + 0.5 - pr) / (R / 2)); if (d >= 1) continue;
-          x.fillStyle = f.paper ? `rgba(255,236,140,${0.75 * (1 - d) ** 1.4})` : `rgba(255,205,150,${0.55 * (1 - d) ** 1.6})`;
-          x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
-        }
+    if (fx.pointer && fx.pointer.on) {                                   // the torch: the letters under the pointer light up
+      const rad = Math.max(5 * cw, 90 * fx.dpr), px = fx.pointer.x - ox, py = fx.pointer.y - oy;
+      const X0 = Math.max(0, Math.floor(px - rad)), Y0 = Math.max(0, Math.floor(py - rad));
+      const X1 = Math.min(aw, Math.ceil(px + rad)), Y1 = Math.min(ah, Math.ceil(py + rad));
+      if (X1 > X0 && Y1 > Y0) lightLetters(f, x, X0, Y0, X1 - X0, Y1 - Y0, t => {
+        const g = t.createRadialGradient(px - X0, py - Y0, 0, px - X0, py - Y0, rad);
+        g.addColorStop(0, `rgba(0,0,0,${f.paper ? 0.9 : 0.8})`); g.addColorStop(0.45, `rgba(0,0,0,${f.paper ? 0.45 : 0.3})`); g.addColorStop(1, "rgba(0,0,0,0)");
+        return g;
+      });
     }
-    for (const rp of fx.ripples) {                                       // a ripple of light from a click or tap
+    for (const rp of fx.ripples) {                                       // a ripple of light through the letters from a click or tap
       const age = (fx.now - rp.t) / 1000; if (age > 1.2) continue;
-      const rad = age * Math.max(f.W, f.H) * 0.55, band = Math.max(cw * 4, 22 * fx.dpr), a = 0.55 * (1 - age / 1.2);
-      const r0 = Math.max(0, Math.floor((rp.y - oy - rad - band) / ch)), r1 = Math.min(f.rows - 1, Math.ceil((rp.y - oy + rad + band) / ch));
-      for (let r = r0; r <= r1; r++) {
-        const yy = oy + (r + 0.5) * ch - rp.y;
-        for (let q = 0; q < cols; q++) {
-          const xx = ox + (q + 0.5) * cw - rp.x, d = Math.abs(Math.hypot(xx, yy) - rad); if (d > band) continue;
-          x.fillStyle = f.paper ? `rgba(240,150,80,${a * (1 - d / band)})` : `rgba(255,200,140,${a * (1 - d / band)})`;
-          x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
-        }
-      }
+      const rad = age * Math.max(f.W, f.H) * 0.55, band = Math.max(cw * 4, 22 * fx.dpr), a = 0.7 * (1 - age / 1.2);
+      const cx = rp.x - ox, cy = rp.y - oy;
+      const X0 = Math.max(0, Math.floor(cx - rad - band)), Y0 = Math.max(0, Math.floor(cy - rad - band));
+      const X1 = Math.min(aw, Math.ceil(cx + rad + band)), Y1 = Math.min(ah, Math.ceil(cy + rad + band));
+      if (X1 > X0 && Y1 > Y0) lightLetters(f, x, X0, Y0, X1 - X0, Y1 - Y0, t => {
+        const g = t.createRadialGradient(cx - X0, cy - Y0, Math.max(0, rad - band), cx - X0, cy - Y0, rad + band);
+        g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.5, `rgba(0,0,0,${a})`); g.addColorStop(1, "rgba(0,0,0,0)");
+        return g;
+      });
     }
-    if (t > f.end && !f.paper) {                                         // a few characters sparkle now and then
+    if (t > f.end && !f.paper) {                                         // a few letters twinkle now and then
+      x.globalCompositeOperation = "lighter"; x.globalAlpha = 0.4;
       for (let s = 0; s < 6; s++) {
         const i = (Math.random() * cols * f.rows) | 0, r = (i / cols) | 0, q = i - r * cols;
-        if (!f.art.glyph[i]) continue;
-        x.fillStyle = "rgba(255,240,215,0.22)"; x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
+        x.drawImage(f.mask, q * cw, r * ch, cw, ch, ox + q * cw, oy + r * ch, cw, ch);
       }
+      x.globalAlpha = 1;
     }
   }
   x.globalCompositeOperation = "source-over";
@@ -709,12 +868,13 @@ function room() {                                    // the device pixels the ar
   const dpr = Math.min(window.devicePixelRatio || 1, 3), stage = $("stage");
   const n = narrow() && document.fullscreenElement !== stage;
   if (!touch || innerWidth !== stableW) { stableW = innerWidth; stableH = innerHeight }   // phones: the address bar coming and going is no new layout
-  const side = n ? 10 : 24, topH = 50, botH = 38;
+  const tools = document.querySelector(".tools"), side = n ? 10 : 24, botH = 38;
+  const topH = Math.max(50, 18 + (tools ? tools.offsetHeight : 0));   // the art starts below the buttons, however many rows they take
   return { dpr, n, topH, botH, w: Math.max(80, (stage.clientWidth - 2 * side) * dpr),
            h: Math.max(80, (n ? Math.max(260, stableH * 0.72) : stage.clientHeight - topH - botH) * dpr) };
 }
-function gridFor(size) {                             // how many characters fit at this letter size
-  const R = room(), iw = state.img.naturalWidth || state.img.width, ih = state.img.naturalHeight || state.img.height;
+function gridFor(size, iw = state.img.naturalWidth || state.img.width, ih = state.img.naturalHeight || state.img.height) {   // how many characters fit at this letter size
+  const R = room();
   let cw = Math.round(Math.max(5, (touch ? 2.4 : 3.5) * R.dpr) * SIZE_STEP[size]);  // never under 5 screen pixels across, so every character keeps its shape
   let cols = Math.floor(Math.min(R.w / cw, R.h * iw / (cw * ih)));
   const capped = cols > 240;
@@ -732,10 +892,10 @@ function geometry(a, cw) {
   return { dpr: R.dpr, cw, W, H, ox: Math.round((W - artW) / 2), oy, n: R.n };
 }
 function show(instant) {
-  if (!art) return;
+  if (!art || cam.on) return;
   const g = geometry(art, stageCw);
   film = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy);
-  film.dpr = g.dpr; film.img = state.img;
+  film.dpr = g.dpr; film.img = art.cut && cut.out ? cut.out : state.img;
   view.width = g.W; view.height = g.H;
   view.style.height = g.n ? g.H / g.dpr + "px" : "";
   setPeek(0); peekSticky = false;
@@ -745,7 +905,7 @@ function show(instant) {
   cancelAnimationFrame(raf); lastDraw = 0;
   t0 = performance.now();
   if (instant || reduced) { finish(film); t0 -= (film.end + 2) * 1000 }
-  else if (!touch && $("stage").clientWidth >= 720) { const f = film; setTimeout(() => { if (film === f) $("hint").hidden = false }, (film.end + 0.3) * 1000) }
+  else if (!touch && $("stage").clientWidth >= 720) { const f = film; setTimeout(() => { if (film === f && !cam.on && !slider.on) $("hint").hidden = false }, (film.end + 0.3) * 1000) }
   raf = requestAnimationFrame(tick);
 }
 // compare: your picture itself, drawn over the art
@@ -764,18 +924,31 @@ function tick(now) {
   raf = requestAnimationFrame(tick);
   const t = (now - t0) / 1000;
   while (ripples.length && now - ripples[0].t > 1300) ripples.shift();
-  const moving = t < film.end + 2 || pointer.on || ripples.length > 0 || peek.v > 0 || peek.target > 0;
+  const moving = t < film.end + 2 || pointer.on || ripples.length > 0 || peek.v > 0 || peek.target > 0 || slider.drag;
   if (!moving && now - lastDraw < 110) return;                         // nothing moving: a few frames a second for the glints
   lastDraw = now;
-  drawFilm(film, ctx, t, { pointer, ripples, now, dpr: film.dpr || 1 });
+  drawFilm(film, ctx, t, slider.on ? { pointer: { on: false }, ripples: [], now, dpr: film.dpr || 1 } : { pointer, ripples, now, dpr: film.dpr || 1 });
   peek.v += (peek.target - peek.v) * 0.3; if (Math.abs(peek.target - peek.v) < 0.02) peek.v = peek.target;
   if (peek.v > 0) { ctx.globalAlpha = peek.v; ctx.drawImage(photoFor(film), film.ox, film.oy); ctx.globalAlpha = 1 }
+  if (slider.on) drawSlider(film);
 }
 function busy(on) { clearTimeout(busy.h); if (on) busy.h = setTimeout(() => { $("busy").hidden = false }, 120); else $("busy").hidden = true }
 async function refresh(instant) {
   if (!state.img || !G) return;
+  if (cam.on) { cam.pending = true; return }        // the camera is showing: your picture waits until it stops
   const my = ++token; busy(true);
   try {
+    if (state.cut === "cut" && !(cut.img === state.img && cut.out)) {   // the cut-out: find the person first
+      $("busy-text").textContent = "FINDING THE PERSON…";
+      let ok = false, failed = false;
+      try { ok = await ensureCut() } catch (e) { failed = true }
+      $("busy-text").textContent = "MAKING THE CHARACTERS…";
+      if (my !== token) return;
+      if (!ok) {
+        state.cut = "keep"; setPressed("cut", "keep");
+        toast(failed ? "The cut-out couldn't start here (its model didn't load), so the whole picture is shown." : "No person was found in this picture, so the whole picture is shown.");
+      }
+    }
     const grid = gridFor(state.size);
     const a = await makeArt(grid.cols, grid.rows);
     if (my !== token) return;
@@ -789,6 +962,7 @@ function counts() {
   for (const b of $("size").querySelectorAll("button")) { const g = gridFor(b.dataset.v); b.querySelector("small").textContent = `${g.cols}×${g.rows}` }
 }
 function useImage(img, name) {
+  if (cam.on) stopCamera(false);                     // a chosen picture takes over from the camera
   state.img = img; state.name = name; arts.clear(); counts(); refresh(false);
   if (narrow() && !name.startsWith("sample")) $("stage").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
 }
@@ -935,14 +1109,19 @@ function asText(a) {
   for (let r = 0; r < a.rows; r++) { let line = ""; for (let q = 0; q < a.cols; q++) line += ALL[a.glyph[r * a.cols + q]]; s += line.replace(/\s+$/, "") + "\n" }
   return s;
 }
-async function saveImage() {
-  if (!art || exporting) return;
+async function imageBlob() {
+  if (!art || exporting) return null;
   let cw = Math.max(6, Math.min(64, Math.round(2400 / art.cols)));
   while (cw > 3 && art.cols * cw * art.rows * cw * 2 > 15e6) cw--;           // phones cap a picture's size
   busy(true); await nextPaint();
   const c = renderArt(art, state.look, cw);
-  c.toBlob(b => { busy(false); if (b) saveFile(b, baseName() + ".png"); else toast("The picture couldn't be made. Try Medium or Big letters.") }, "image/png");
+  if (state.look === "glow") { const pad = Math.round(0.06 * Math.max(c.width, c.height)); drawBloom(c.getContext("2d"), bloomOf(c, c.width, c.height, pad), 0, 0, c.width, c.height, pad) }
+  const b = await new Promise(res => c.toBlob(res, "image/png"));
+  busy(false);
+  if (!b) toast("The picture couldn't be made. Try Medium or Big letters.");
+  return b;
 }
+async function saveImage() { if (cam.on) return; const b = await imageBlob(); if (b) saveFile(b, baseName() + ".png") }
 
 // the video: every frame drawn in turn and encoded as H.264 MP4 (or the best this browser can make)
 function loadMuxer() {
@@ -958,7 +1137,7 @@ async function pickEncoder(W, H, bitrate) {
   return null;
 }
 let cancelExport = false;
-function progress(v) { $("export-bar").style.width = Math.round(v * 100) + "%"; $("export-text").textContent = `MAKING YOUR VIDEO · ${Math.round(v * 100)}%` }
+function progress(v, what = "VIDEO") { $("export-bar").style.width = Math.round(v * 100) + "%"; $("export-text").textContent = `MAKING YOUR ${what} · ${Math.round(v * 100)}%` }
 function videoGeometry(a) {
   // about 1080 pixels across (or tall, for a wide picture), with every character a whole number of pixels;
   // sides a multiple of 16 and within what phones' H.264 encoders take (level 4: 8,160 blocks of 16 x 16)
@@ -969,52 +1148,450 @@ function videoGeometry(a) {
   const [W, H] = size(cw);
   return { W, H, cw, ox: Math.round((W - a.cols * cw) / 2), oy: Math.round((H - a.rows * 2 * cw) / 2) };
 }
-function lockUI(on) { for (const id of ["file", "save-video", "save-image", "save-text", "copy", "sample", "replay", "peek"]) $(id).disabled = on }
-async function saveVideo() {
-  if (!art || exporting) return;
-  exporting = true; cancelExport = false; cancelAnimationFrame(raf); lockUI(true); setPeek(0); peekSticky = false;
-  $("export").hidden = false; progress(0);
-  try {
-    const g = videoGeometry(art), canvas = document.createElement("canvas"); canvas.width = g.W; canvas.height = g.H;
-    const x = canvas.getContext("2d");
-    const f = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy);
-    const frames = Math.ceil((f.end + HOLD) * FPS);
-    let blob = null, ext = "mp4";
-    const enc = await pickEncoder(g.W, g.H, Math.round(Math.min(20e6, Math.max(8e6, 1.2e8 / g.cw))));
-    const Mux = enc ? await loadMuxer().catch(() => null) : null;
-    if (enc && Mux) {
-      const muxer = new Mux.Muxer({ target: new Mux.ArrayBufferTarget(), video: { codec: enc.kind, width: g.W, height: g.H, frameRate: FPS }, fastStart: "in-memory", firstTimestampBehavior: "offset" });
-      let failed = null;
-      const encoder = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => { failed = e } });
-      encoder.configure(enc.config);
-      for (let i = 0; i < frames && !cancelExport && !failed; i++) {
-        drawFilm(f, x, i / FPS, null);
-        const vf = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
-        encoder.encode(vf, { keyFrame: i % (FPS * 2) === 0 }); vf.close();
-        while (encoder.encodeQueueSize > 4) await sleep(2);
-        if (i % 4 === 0) { progress(i / frames); await sleep(0) }
-      }
-      if (!cancelExport && !failed) { await encoder.flush(); muxer.finalize(); blob = new Blob([muxer.target.buffer], { type: "video/mp4" }) }
-      try { encoder.close() } catch (e) {}
-      if (failed) throw failed;
-    } else {                                                             // no encoder here: record it as it plays
-      const mime = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
-      if (!mime || !canvas.captureStream) throw new Error("This browser can't make videos.");
-      ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
-      const rec = new MediaRecorder(canvas.captureStream(FPS), { mimeType: mime, videoBitsPerSecond: 10e6 }), chunks = [];
-      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data) };
-      const stopped = new Promise(r => { rec.onstop = r });
-      rec.start(250); const start = performance.now(), total = frames / FPS;
-      for (;;) { const t = (performance.now() - start) / 1000; if (t > total || cancelExport) break; drawFilm(f, x, t, null); progress(t / total); await new Promise(r => requestAnimationFrame(r)) }
-      rec.stop(); await stopped;
-      blob = new Blob(chunks, { type: mime.split(";")[0] });
-    }
-    if (!cancelExport && blob) {
-      progress(1); await saveFile(blob, `${baseName()}.${ext}`);
-      if (ext !== "mp4") toast("This browser can only make WebM videos, so the video was saved as .webm.");
-    }
-  } catch (e) { console.error(e); toast(e && e.message === "This browser can't make videos." ? e.message : "The video couldn't be made in this browser.") }
+function lockUI(on) { for (const id of ["file", "save-video", "save-image", "save-text", "save-gif", "share", "copy", "sample", "replay", "peek", "slider", "camera"]) $(id).disabled = on }
+// a long save (video or GIF) runs with the progress bar; the page's own formation waits meanwhile
+async function exportTask(what, work) {
+  if (!art || exporting || cam.on) return null;
+  exporting = true; cancelExport = false; cancelAnimationFrame(raf); lockUI(true); setPeek(0); peekSticky = false; closeShare();
+  $("export").hidden = false; progress(0, what);
+  try { const r = await work(v => progress(v, what)); if (r && !cancelExport) progress(1, what); return cancelExport ? null : r }
+  catch (e) { console.error(e); toast(what === "GIF" ? "The GIF couldn't be made in this browser." : e && e.message === "This browser can't make videos." ? e.message : "The video couldn't be made in this browser."); return null }
   finally { exporting = false; lockUI(false); $("export").hidden = true; t0 = performance.now() - (film ? (film.end + 2) * 1000 : 0); if (film) { finish(film); raf = requestAnimationFrame(tick) } }
+}
+async function buildVideo(onProgress) {
+  const g = videoGeometry(art), canvas = document.createElement("canvas"); canvas.width = g.W; canvas.height = g.H;
+  const x = canvas.getContext("2d");
+  const f = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy);
+  const frames = Math.ceil((f.end + HOLD) * FPS);
+  let blob = null, ext = "mp4";
+  const enc = await pickEncoder(g.W, g.H, Math.round(Math.min(20e6, Math.max(8e6, 1.2e8 / g.cw))));
+  const Mux = enc ? await loadMuxer().catch(() => null) : null;
+  if (enc && Mux) {
+    const muxer = new Mux.Muxer({ target: new Mux.ArrayBufferTarget(), video: { codec: enc.kind, width: g.W, height: g.H, frameRate: FPS }, fastStart: "in-memory", firstTimestampBehavior: "offset" });
+    let failed = null;
+    const encoder = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => { failed = e } });
+    encoder.configure(enc.config);
+    for (let i = 0; i < frames && !cancelExport && !failed; i++) {
+      drawFilm(f, x, i / FPS, null);
+      const vf = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+      encoder.encode(vf, { keyFrame: i % (FPS * 2) === 0 }); vf.close();
+      while (encoder.encodeQueueSize > 4) await sleep(2);
+      if (i % 4 === 0) { onProgress(i / frames); await sleep(0) }
+    }
+    if (!cancelExport && !failed) { await encoder.flush(); muxer.finalize(); blob = new Blob([muxer.target.buffer], { type: "video/mp4" }) }
+    try { encoder.close() } catch (e) {}
+    if (failed) throw failed;
+  } else {                                                             // no encoder here: record it as it plays
+    const mime = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+    if (!mime || !canvas.captureStream) throw new Error("This browser can't make videos.");
+    ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+    const rec = new MediaRecorder(canvas.captureStream(FPS), { mimeType: mime, videoBitsPerSecond: 10e6 }), chunks = [];
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data) };
+    const stopped = new Promise(r => { rec.onstop = r });
+    rec.start(250); const start = performance.now(), total = frames / FPS;
+    for (;;) { const t = (performance.now() - start) / 1000; if (t > total || cancelExport) break; drawFilm(f, x, t, null); onProgress(t / total); await new Promise(r => requestAnimationFrame(r)) }
+    rec.stop(); await stopped;
+    blob = new Blob(chunks, { type: mime.split(";")[0] });
+  }
+  return cancelExport || !blob ? null : { blob, ext };
+}
+async function saveVideo() {
+  const r = await exportTask("VIDEO", buildVideo);
+  if (!r) return;
+  await saveFile(r.blob, `${baseName()}.${r.ext}`);
+  if (r.ext !== "mp4") toast("This browser can only make WebM videos, so the video was saved as .webm.");
+}
+async function saveGif() { const r = await exportTask("GIF", buildGif); if (r) saveFile(r.blob, baseName() + ".gif") }
+
+// ------------------------------------------------------------------ GIF: a small animated picture for sharing
+function medianCut(hist, n) {                        // up to n colours that best cover the 15-bit colour counts
+  const arr = []; for (let c = 0; c < 32768; c++) if (hist[c]) arr.push(c);
+  const key = (c, k) => k === 0 ? c >> 10 : k === 1 ? (c >> 5) & 31 : c & 31;
+  const stat = (lo, hi) => {
+    const mn = [31, 31, 31], mx = [0, 0, 0]; let cnt = 0;
+    for (let i = lo; i < hi; i++) { const c = arr[i]; for (let k = 0; k < 3; k++) { const v = key(c, k); if (v < mn[k]) mn[k] = v; if (v > mx[k]) mx[k] = v } cnt += hist[c] }
+    const r = [mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]], k = r[0] >= r[1] && r[0] >= r[2] ? 0 : r[1] >= r[2] ? 1 : 2;
+    return { lo, hi, cnt, k, range: r[k] };
+  };
+  const boxes = arr.length ? [stat(0, arr.length)] : [];
+  while (boxes.length < n) {
+    let bi = -1, best = 0;
+    for (let i = 0; i < boxes.length; i++) { const b = boxes[i]; if (b.hi - b.lo > 1 && b.range > 0 && b.cnt * b.range > best) { best = b.cnt * b.range; bi = i } }
+    if (bi < 0) break;
+    const b = boxes[bi], part = arr.slice(b.lo, b.hi).sort((p, q) => key(p, b.k) - key(q, b.k));
+    for (let i = 0; i < part.length; i++) arr[b.lo + i] = part[i];
+    let acc = 0, m = b.lo; for (; m < b.hi - 2; m++) { acc += hist[arr[m]]; if (acc * 2 >= b.cnt) break }
+    boxes.splice(bi, 1, stat(b.lo, m + 1), stat(m + 1, b.hi));
+  }
+  return boxes.map(b => { let r = 0, g = 0, bl = 0, w = 0; for (let i = b.lo; i < b.hi; i++) { const c = arr[i], h = hist[c]; r += ((c >> 10) * 8 + 4) * h; g += (((c >> 5) & 31) * 8 + 4) * h; bl += ((c & 31) * 8 + 4) * h; w += h } return [r / w, g / w, bl / w].map(v => Math.round(v)) });
+}
+function gifLZW(px, out) {                           // the GIF's LZW for 8-bit colour indices, written as 255-byte blocks
+  const clear = 256, eoi = 257, codes = new Int16Array(4096 * 256), buf = []; let size = 9, next = 258, cur = 0, bits = 0;
+  const write = c => { cur |= c << bits; bits += size; while (bits >= 8) { buf.push(cur & 255); cur >>>= 8; bits -= 8 } };
+  const emit = c => { write(c); if (next > (1 << size) - 1 && size < 12) size++ };
+  write(clear);
+  let prefix = px[0];
+  for (let i = 1; i < px.length; i++) {
+    const k = px[i], key = (prefix << 8) | k, v = codes[key];
+    if (v) { prefix = v - 1; continue }
+    emit(prefix);
+    if (next < 4096) codes[key] = ++next;            // stored as code + 1 so that 0 means "not yet"
+    else { write(clear); codes.fill(0); size = 9; next = 258 }
+    prefix = k;
+  }
+  emit(prefix); write(eoi); if (bits > 0) buf.push(cur & 255);
+  out.push(new Uint8Array([8]));
+  for (let i = 0; i < buf.length; i += 255) { const n = Math.min(255, buf.length - i), blk = new Uint8Array(n + 1); blk[0] = n; for (let j = 0; j < n; j++) blk[j + 1] = buf[i + j]; out.push(blk) }
+  out.push(new Uint8Array([0]));
+}
+async function buildGif(onProgress) {
+  const a = art, look = state.look;
+  let cw = Math.max(4, Math.min(12, Math.round(560 / a.cols)));
+  while (cw > 4 && a.cols * cw * a.rows * 2 * cw > 1.4e6) cw--;
+  const m = 8, W = a.cols * cw + 2 * m, H = a.rows * 2 * cw + 2 * m, FPSG = 10;
+  const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d", { willReadFrequently: true });
+  // the colours: a first quick run of the formation, sampled, picks the 255 colours the GIF can hold
+  const hist = new Uint32Array(32768), sample = (d, step) => { for (let i = 0; i < d.length; i += 4 * step) hist[(d[i] >> 3) << 10 | (d[i + 1] >> 3) << 5 | d[i + 2] >> 3]++ };
+  const probe = makeFilm(a, look, cw, W, H, m, m, { particles: 1500 });
+  for (let t = 0; t <= probe.end + 0.5; t += 0.25) { drawFilm(probe, x, t, null); sample(x.getImageData(0, 0, W, H).data, 3); await sleep(0); if (cancelExport) return null }
+  const bgc = look === "paper" ? [239, 231, 216] : [0, 0, 0];
+  hist[(bgc[0] >> 3) << 10 | (bgc[1] >> 3) << 5 | bgc[2] >> 3] = 0;
+  const palette = h => { const pal = [bgc, ...medianCut(h, 254)], table = new Uint8Array(768); pal.forEach((q, i) => table.set(q, (i + 1) * 3)); table.set(bgc, 0); return { pal, table, near: new Int16Array(32768).fill(-1) } };
+  const indexer = P => (r, g, b) => {                // index 0 is kept for "same as the frame before"
+    const k = (r >> 3) << 10 | (g >> 3) << 5 | b >> 3; let v = P.near[k];
+    if (v < 0) { let bd = Infinity; for (let i = 0; i < P.pal.length; i++) { const q = P.pal[i], d = 2 * (q[0] - r) ** 2 + 4 * (q[1] - g) ** 2 + 3 * (q[2] - b) ** 2; if (d < bd) { bd = d; v = i + 1 } } P.near[k] = v }
+    return v;
+  };
+  const G0 = palette(hist), table = G0.table, index = indexer(G0);
+  const le = v => [v & 255, (v >> 8) & 255], out = [];
+  out.push(new Uint8Array([71, 73, 70, 56, 57, 97, ...le(W), ...le(H), 0xf7, 0, 0]), table);
+  out.push(new Uint8Array([0x21, 0xff, 11, 78, 69, 84, 83, 67, 65, 80, 69, 50, 46, 48, 3, 1, 0, 0, 0]));   // play for ever
+  const f = makeFilm(a, look, cw, W, H, m, m, { particles: 1500 }), frames = Math.ceil((f.end + 0.1) * FPSG);
+  let prev = null;
+  for (let i = 0; i <= frames; i++) {
+    if (cancelExport) return null;
+    drawFilm(f, x, i === frames ? f.end + 1.6 : i / FPSG, null);   // the last one: the finished picture, once the light sweep is over
+    const d = x.getImageData(0, 0, W, H).data, idx = new Uint8Array(W * H);
+    if (i === frames) {                              // the finished picture gets its own 255 colours, so it stays true
+      const h = new Uint32Array(32768); for (let o = 0; o < d.length; o += 4) h[(d[o] >> 3) << 10 | (d[o + 1] >> 3) << 5 | d[o + 2] >> 3]++;
+      h[(bgc[0] >> 3) << 10 | (bgc[1] >> 3) << 5 | bgc[2] >> 3] = 0;
+      const P = palette(h), ix = indexer(P);
+      for (let q = 0, o = 0; q < W * H; q++, o += 4) idx[q] = ix(d[o], d[o + 1], d[o + 2]);
+      out.push(new Uint8Array([0x21, 0xf9, 4, 1 << 2, ...le(250), 0, 0, 0x2c, 0, 0, 0, 0, ...le(W), ...le(H), 0x87]), P.table);
+      gifLZW(idx, out);
+      if (onProgress) onProgress(1);
+      break;
+    }
+    for (let p = 0, o = 0; p < W * H; p++, o += 4) idx[p] = index(d[o], d[o + 1], d[o + 2]);
+    // only the part that changed is stored; what stayed the same is left see-through
+    let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    if (prev) { for (let p = 0; p < W * H; p++) if (idx[p] !== prev[p]) { const yy = (p / W) | 0, xx = p - yy * W; if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy } }
+    else { x0 = 0; y0 = 0; x1 = W - 1; y1 = H - 1 }
+    if (x1 < 0) { x0 = y0 = x1 = y1 = 0 }
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, sub = new Uint8Array(w * h);
+    for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) { const p = (y0 + yy) * W + x0 + xx; sub[yy * w + xx] = prev && idx[p] === prev[p] ? 0 : idx[p] }
+    const delay = i === frames ? 250 : 100 / FPSG;
+    out.push(new Uint8Array([0x21, 0xf9, 4, (1 << 2) | 1, ...le(delay), 0, 0, 0x2c, ...le(x0), ...le(y0), ...le(w), ...le(h), 0]));
+    gifLZW(sub, out);
+    prev = idx;
+    if (onProgress) onProgress(i / frames);
+    if (i % 2 === 0) await sleep(0);
+  }
+  out.push(new Uint8Array([0x3b]));
+  return { blob: new Blob(out, { type: "image/gif" }), ext: "gif" };
+}
+
+// ------------------------------------------------------------------ cut out the person (only when switched on)
+// A small model that finds the main subject of a picture (U2-Net-p) runs right here in the browser with
+// TensorFlow.js; both are loaded only the first time the cut-out is used, and the picture never leaves the device.
+const TFJS = "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js";
+const loadScript = src => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("load " + src)); document.head.appendChild(s) });
+let personNet = null;
+function halfToFloat(h) {
+  const out = new Float32Array(h.length);
+  for (let i = 0; i < h.length; i++) {
+    const v = h[i], s = v & 0x8000 ? -1 : 1, e = (v >> 10) & 31, m = v & 1023;
+    out[i] = e === 0 ? s * m * 5.960464477539063e-8 : e === 31 ? (m ? NaN : s * Infinity) : s * (1 + m / 1024) * Math.pow(2, e - 15);
+  }
+  return out;
+}
+async function personModel() {
+  if (personNet) return personNet;
+  if (!window.tf) await loadScript(TFJS);
+  if (!window.GLYPHFALL_PERSON) await loadScript("person-model.js");
+  try { await tf.setBackend("webgl"); await tf.ready() } catch (e) {}
+  if (tf.getBackend() !== "webgl") { await tf.setBackend("cpu"); await tf.ready() }
+  const M = window.GLYPHFALL_PERSON, bin = atob(M.w), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const f = halfToFloat(new Uint16Array(u8.buffer)), size = s => s.reduce((a, b) => a * b, 1);
+  const prog = M.prog.map(p => p.op !== "conv" ? p : { ...p, W: tf.tensor(f.subarray(p.w[0], p.w[0] + size(p.w[1])), p.w[1]), B: tf.tensor(f.subarray(p.b[0], p.b[0] + size(p.b[1])), p.b[1]) });
+  const uses = {}; for (const p of prog) for (const t of [p.x, p.like, ...(p.xs || [])]) if (t) uses[t] = (uses[t] || 0) + 1;
+  return (personNet = { prog, uses });
+}
+async function subjectMap(input) {                   // [1, S, S, 3] in, [1, S, S, 1] out: how much each spot belongs to the subject
+  const P = await personModel();
+  return tf.tidy(() => {
+    const env = { i: input }, left = { ...P.uses };
+    for (const p of P.prog) {
+      const spent = [], get = t => { const v = env[t]; if (--left[t] === 0 && t !== "i") { delete env[t]; spent.push(v) } return v };
+      let y;
+      if (p.op === "conv") { y = tf.add(tf.conv2d(get(p.x), p.W, 1, "same", "NHWC", p.d), p.B); if (p.relu) y = tf.relu(y) }
+      else if (p.op === "relu") y = tf.relu(get(p.x));
+      else if (p.op === "pool") y = tf.maxPool(get(p.x), 2, 2, "same");
+      else if (p.op === "up") { const like = get(p.like); y = tf.image.resizeBilinear(get(p.x), [like.shape[1], like.shape[2]], false, true) }
+      else if (p.op === "cat") y = tf.concat(p.xs.map(get), 3);
+      else if (p.op === "add") y = tf.add(get(p.xs[0]), get(p.xs[1]));
+      else y = tf.sigmoid(get(p.x));
+      env[p.out] = y; for (const s of spent) s.dispose();
+    }
+    return env[P.prog[P.prog.length - 1].out];
+  });
+}
+// the picture with only its main person kept (the biggest connected part the model found); null if none
+async function personCut(img) {
+  const S = 320, c = document.createElement("canvas"); c.width = c.height = S;
+  const x = c.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high"; x.drawImage(img, 0, 0, S, S);
+  await personModel();
+  const inp = tf.tidy(() => tf.browser.fromPixels(c).toFloat().div(255).sub(tf.tensor1d([0.485, 0.456, 0.406])).div(tf.tensor1d([0.229, 0.224, 0.225])).expandDims(0));
+  // the picture and its mirror image, averaged: the model then misses fewer thin parts like arms
+  const flip = tf.tidy(() => tf.reverse(inp, 2));
+  const a1 = await subjectMap(inp), a2 = await subjectMap(flip); inp.dispose(); flip.dispose();
+  const out = tf.tidy(() => tf.add(a1, tf.reverse(a2, 2)).div(2)); a1.dispose(); a2.dispose();
+  const s = await out.data(); out.dispose();
+  let mn = Infinity, mx = -Infinity; for (let i = 0; i < s.length; i++) { if (s[i] < mn) mn = s[i]; if (s[i] > mx) mx = s[i] }
+  if (!(mx - mn > 0.05)) return null;
+  for (let i = 0; i < s.length; i++) s[i] = (s[i] - mn) / (mx - mn);
+  // parts closer than a few pixels count as one; the biggest part is the main person
+  const on = new Uint8Array(S * S); for (let i = 0; i < S * S; i++) on[i] = s[i] > 0.12 ? 1 : 0;
+  const grow = (m, r) => {                           // every spot within r of a marked one
+    const t = new Uint8Array(S * S), o = new Uint8Array(S * S);
+    for (let y = 0; y < S; y++) { let last = -1e9; for (let x = 0; x < S; x++) { if (m[y * S + x]) last = x; if (x - last <= r) t[y * S + x] = 1 } last = 1e9; for (let x = S - 1; x >= 0; x--) { if (m[y * S + x]) last = x; if (last - x <= r) t[y * S + x] = 1 } }
+    for (let x = 0; x < S; x++) { let last = -1e9; for (let y = 0; y < S; y++) { if (t[y * S + x]) last = y; if (y - last <= r) o[y * S + x] = 1 } last = 1e9; for (let y = S - 1; y >= 0; y--) { if (t[y * S + x]) last = y; if (last - y <= r) o[y * S + x] = 1 } }
+    return o;
+  };
+  const joined = grow(on, 4), lab = new Int32Array(S * S), area = [0], stack = [];
+  for (let i = 0; i < S * S; i++) {
+    if (!joined[i] || lab[i]) continue;
+    const id = area.length; area.push(0); lab[i] = id; stack.push(i);
+    while (stack.length) {
+      const k = stack.pop(); if (on[k]) area[id]++;
+      const y = (k / S) | 0, xx = k - y * S;
+      for (const n of [xx > 0 ? k - 1 : -1, xx < S - 1 ? k + 1 : -1, y > 0 ? k - S : -1, y < S - 1 ? k + S : -1]) if (n >= 0 && joined[n] && !lab[n]) { lab[n] = id; stack.push(n) }
+    }
+  }
+  let best = 0; for (let id = 1; id < area.length; id++) if (area[id] > area[best]) best = id;
+  if (!best || area[best] < 0.004 * S * S) return null;
+  const keep = new Uint8Array(S * S); for (let i = 0; i < S * S; i++) keep[i] = lab[i] === best ? 1 : 0;
+  const near = grow(keep, 3);
+  const m = document.createElement("canvas"); m.width = m.height = S;
+  const mx2 = m.getContext("2d"), md = mx2.createImageData(S, S);
+  for (let i = 0; i < S * S; i++) { let a = near[i] ? (s[i] - 0.06) / 0.34 : 0; a = a < 0 ? 0 : a > 1 ? 1 : a; a = a * a * (3 - 2 * a); md.data[i * 4 + 3] = Math.round(a * 255) }
+  mx2.putImageData(md, 0, 0);
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, k = Math.min(1, 2048 / Math.max(iw, ih));
+  const o = document.createElement("canvas"); o.width = Math.max(1, Math.round(iw * k)); o.height = Math.max(1, Math.round(ih * k));
+  const ox = o.getContext("2d"); ox.imageSmoothingQuality = "high"; ox.drawImage(img, 0, 0, o.width, o.height);
+  ox.globalCompositeOperation = "destination-in"; ox.drawImage(m, 0, 0, o.width, o.height);
+  return o;
+}
+const cut = { img: null, out: null, job: null };   // the cut-out picture, made once for each picture
+const srcImg = () => (state.cut === "cut" && cut.img === state.img && cut.out) ? cut.out : state.img;
+function ensureCut() {                               // resolves true once the cut-out of the current picture is ready
+  const img = state.img;
+  if (cut.img === img && cut.out) return Promise.resolve(true);
+  if (cut.img === img && cut.job) return cut.job;
+  cut.img = img; cut.out = null;
+  const job = personCut(img).then(o => { if (cut.img === img) cut.out = o; return !!o }, e => { console.error(e); if (cut.img === img) cut.job = null; throw e })
+    .finally(() => { if (cut.img === img && cut.job === job) cut.job = null });
+  cut.job = job; return job;
+}
+
+// ------------------------------------------------------------------ live camera (only while it is switched on)
+const cam = { on: false, stream: null, facing: "user", raf: 0, last: 0, key: "", gain: 0, lo: 0, hi: 1, pending: false };
+const camVideo = $("cam");
+const CAM_ERR = {
+  NotAllowedError: "The camera wasn't allowed. Allow it for this page, or open index.html in your phone's browser (the claude.ai view may not allow cameras).",
+  SecurityError: "Cameras are blocked in this view. Open index.html in your browser to use one.",
+  NotFoundError: "No camera was found on this device.", NotReadableError: "The camera is busy in another app.", OverconstrainedError: "That camera isn't available.",
+};
+async function startCamera(facing) {
+  if (exporting) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast("This browser can't use a camera here. Open index.html in your browser to use one."); return }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }) }
+  catch (e) { toast(CAM_ERR[e && e.name] || "The camera couldn't be opened here."); return }
+  stopStream(); cam.stream = stream; cam.facing = facing;
+  camVideo.srcObject = stream;
+  try { await camVideo.play() } catch (e) {}
+  if (!cam.on) enterLive();
+}
+function stopStream() { if (cam.stream) for (const t of cam.stream.getTracks()) t.stop(); cam.stream = null; camVideo.srcObject = null }
+function liveUI(on) {
+  for (const id of ["snap", "flip", "cam-stop"]) $(id).hidden = !on;
+  for (const id of ["replay", "peek", "slider"]) $(id).hidden = on;
+  for (const id of ["save-video", "save-image", "save-text", "save-gif", "share", "copy"]) $(id).disabled = on;
+  $("camera").setAttribute("aria-pressed", on ? "true" : "false");
+  $("camera").firstChild.textContent = on ? "Stop camera" : "Live camera";
+  $("m-name").textContent = on ? "live camera" : state.name;
+}
+function enterLive() {
+  cam.on = true; cam.key = ""; cam.gain = 0; cam.lo = 0; cam.hi = 1;
+  ++token; busy(false); cancelAnimationFrame(raf); setPeek(0); peekSticky = false; setSlider(false); $("hint").hidden = true; closeShare();
+  liveUI(true);
+  cam.raf = requestAnimationFrame(liveTick);
+}
+function stopCamera(restore = true) {
+  if (!cam.on) return;
+  stopStream(); cam.on = false; cancelAnimationFrame(cam.raf); liveUI(false);
+  if (restore) { if (cam.pending) { cam.pending = false; refresh(true) } else if (art) show(true) }
+  cam.pending = false;
+}
+function liveTick(now) {
+  if (!cam.on) return;
+  cam.raf = requestAnimationFrame(liveTick);
+  if (now - cam.last < 1000 / 24) return;            // about 24 pictures a second
+  cam.last = now;
+  try { liveFrame() } catch (e) { console.error(e) }
+}
+function livePools(chars) {                          // for every amount of ink wanted, the characters to mix
+  const ramp = [], [r] = SETS[chars] || SETS.every;
+  for (const ch of r) ramp.push(ch.charCodeAt(0) - 32);
+  let top = 0; for (const g of ramp) if (G.ink[g] > top) top = G.ink[g];
+  const toneG = g => G.ink[g] / (top || 1), pools = [];
+  for (let b = 0; b < 64; b++) {
+    const w = b / 63; let bd = Infinity;
+    for (const g of ramp) { if (g === 0 && w > 0.04) continue; bd = Math.min(bd, Math.abs(toneG(g) - w)) }
+    const tol = bd + 0.05 + 0.5 * Math.max(0, bd - 0.1), pool = ramp.filter(g => !(g === 0 && w > 0.04) && Math.abs(toneG(g) - w) <= tol);
+    pools.push(pool.length ? pool : [ramp[0]]);
+  }
+  return pools;
+}
+function liveFrame() {
+  const v = camVideo, vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh || !G) return;
+  const g = gridFor(state.size, vw, vh), paper = state.look === "paper";
+  const key = [g.cols, g.rows, g.cw, state.chars, state.words, state.look, $("stage").clientWidth, $("stage").clientHeight].join("|");
+  if (key !== cam.key) {                             // a new grid: size everything for it
+    cam.key = key;
+    const geo = geometry({ cols: g.cols, rows: g.rows }, g.cw);
+    view.width = geo.W; view.height = geo.H; view.style.height = geo.n ? geo.H / geo.dpr + "px" : "";
+    $("stage").classList.toggle("paper", paper);
+    cam.geo = geo; cam.g = g;
+    cam.small = document.createElement("canvas"); cam.small.width = g.cols; cam.small.height = g.rows;
+    cam.sx = cam.small.getContext("2d", { willReadFrequently: true }); cam.sx.imageSmoothingQuality = "high";
+    cam.out = document.createElement("canvas"); cam.out.width = g.cols * g.cw; cam.out.height = g.rows * g.cw * 2;
+    cam.ox = cam.out.getContext("2d"); cam.img = new ImageData(cam.out.width, cam.out.height);
+    cam.pools = livePools(state.chars); cam.words = state.chars === "words" ? wordCodes() : null;
+    cam.art = { cols: g.cols, rows: g.rows, glyph: new Uint8Array(g.cols * g.rows), lin: new Float32Array(g.cols * g.rows * 3) };
+    cam.tone = new Float32Array(g.cols * g.rows);
+    $("m-grid").textContent = `${g.cols} × ${g.rows} characters · live`;
+  }
+  const { cols, rows, cw } = cam.g, N = cols * rows, sx = cam.sx, A = cam.art;
+  sx.save(); if (cam.facing === "user") { sx.translate(cols, 0); sx.scale(-1, 1) } sx.drawImage(v, 0, 0, cols, rows); sx.restore();
+  const d = sx.getImageData(0, 0, cols, rows).data, ct = Math.pow(2, state.contrast / 50), br = state.bright / 100;
+  const adj = c => { let q = (c / 255 - 0.5) * ct + 0.5 + br; return q < 0 ? 0 : q > 1 ? 1 : q };
+  for (let i = 0, o = 0; i < N; i++, o += 4) {
+    const r = adj(d[o]), gg = adj(d[o + 1]), b = adj(d[o + 2]), mx = Math.max(r, gg, b);
+    cam.tone[i] = 0.5 * (0.299 * r + 0.587 * gg + 0.114 * b) + 0.5 * mx;
+    A.lin[i * 3] = r <= 0.04045 ? r / 12.92 : ((r + 0.055) / 1.055) ** 2.4;
+    A.lin[i * 3 + 1] = gg <= 0.04045 ? gg / 12.92 : ((gg + 0.055) / 1.055) ** 2.4;
+    A.lin[i * 3 + 2] = b <= 0.04045 ? b / 12.92 : ((b + 0.055) / 1.055) ** 2.4;
+  }
+  const sorted = cam.tone.slice().sort(), lo = sorted[Math.floor((N - 1) * 0.01)], hi = Math.max(lo + 1e-3, sorted[Math.floor((N - 1) * 0.997)]);
+  cam.lo += (lo - cam.lo) * 0.25; cam.hi += (hi - cam.hi) * 0.25;   // eased, so the shading doesn't flicker
+  const wl = cam.words ? cam.words.length : 0;
+  for (let rr = 0, i = 0; rr < rows; rr++) for (let q = 0; q < cols; q++, i++) {
+    if (wl) { A.glyph[i] = cam.words[i % wl]; continue }
+    let w;
+    if (paper) { let dk = 0; for (let k = 0; k < 3; k++) { const s = 1 - toS(A.lin[i * 3 + k]) / 255; if (s > dk) dk = s } w = 0.05 + 0.95 * dk }
+    else { let T = (cam.tone[i] - cam.lo) / (cam.hi - cam.lo); T = T < 0 ? 0 : T > 1 ? 1 : T; w = 0.25 + 0.75 * Math.pow(T, 0.8) }
+    const pool = cam.pools[Math.round(w * 63)];
+    let h = Math.imul(rr + 1, 0x9e3779b1) ^ Math.imul(q + 7, 0x85ebca77); h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h ^= h >>> 13;
+    A.glyph[i] = pool[(h >>> 0) % pool.length];
+  }
+  const ga = glyphAlpha(cw, cw * 2), theme = themeRGB(), plan = colourPlan(A, state.look, ga.ink, theme);
+  cam.gain = cam.gain ? cam.gain + (plan.gain - cam.gain) * 0.2 : plan.gain;
+  const { fore, back } = colourFill(A, state.look, ga.ink, plan, cam.gain);
+  paintLetters(A, cw, ga, fore, back, cam.img);
+  cam.ox.putImageData(cam.img, 0, 0);
+  const geo = cam.geo;
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  ctx.fillStyle = paper ? "#efe7d8" : "#000"; ctx.fillRect(0, 0, view.width, view.height);
+  ctx.drawImage(cam.out, geo.ox, geo.oy);
+  if (state.look === "glow") { const aw = cam.out.width, ah = cam.out.height, pad = Math.round(0.06 * Math.max(aw, ah)); cam.bl = bloomOf(cam.out, aw, ah, pad, cam.bl); drawBloom(ctx, cam.bl, geo.ox, geo.oy, aw, ah, pad) }
+}
+function snapshot() {                                // the camera's picture now becomes your picture
+  const v = camVideo, vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh) { toast("The camera isn't ready yet."); return }
+  const c = document.createElement("canvas"); c.width = vw; c.height = vh; const x = c.getContext("2d");
+  if (cam.facing === "user") { x.translate(vw, 0); x.scale(-1, 1) }
+  x.drawImage(v, 0, 0);
+  cam.pending = false; stopCamera(false);
+  useImage(c, "camera snapshot");
+}
+
+// ------------------------------------------------------------------ share: the phone's own share menu
+const SHARE_KINDS = { png: "picture", gif: "GIF", mp4: "video" };
+function closeShare() { $("share-menu").hidden = true; $("share").setAttribute("aria-expanded", "false") }
+async function makeShareFile(kind) {
+  if (kind === "png") { const r = await imageBlob(); return r && { blob: r, name: baseName() + ".png" } }
+  const r = await exportTask(kind === "gif" ? "GIF" : "VIDEO", kind === "gif" ? buildGif : buildVideo);
+  return r && { blob: r.blob, name: `${baseName()}.${r.ext}` };
+}
+async function share(kind) {
+  closeShare();
+  if (!art || exporting || cam.on) return;
+  const made = await makeShareFile(kind);
+  if (!made) return;
+  const file = new File([made.blob], made.name, { type: made.blob.type });
+  const can = !!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
+  if (!can) { toast("This view can't open the share menu, so the file is being saved instead."); saveFile(made.blob, made.name); return }
+  try { await navigator.share({ files: [file], title: "Glyphfall" }) }
+  catch (e) {
+    if (e && e.name === "AbortError") return;        // closed the menu: nothing to do
+    readyToShare(file, made);                        // the making took a while: one more tap opens the menu
+  }
+}
+function readyToShare(file, made) {
+  const r = $("ready"); $("ready-text").textContent = `Your ${SHARE_KINDS[made.name.split(".").pop()] || "file"} is ready`; r.hidden = false;
+  $("ready-share").onclick = async () => {
+    r.hidden = true;
+    try { await navigator.share({ files: [file], title: "Glyphfall" }) }
+    catch (e) { if (!e || e.name !== "AbortError") { toast("The share menu isn't allowed here, so the file is being saved instead."); saveFile(made.blob, made.name) } }
+  };
+  $("ready-close").onclick = () => { r.hidden = true };
+}
+
+// ------------------------------------------------------------------ the before/after slider
+const slider = { on: false, at: 0.5, drag: false };
+function setSlider(on) {
+  slider.on = on; slider.drag = false;
+  $("slider").setAttribute("aria-pressed", on ? "true" : "false");
+  $("stage").classList.toggle("sliding", on);
+  view.style.touchAction = on ? "pan-y" : "";
+  if (on) { setPeek(0); peekSticky = false; $("hint").hidden = true }
+}
+function slideTo(e) {
+  if (!film) return;
+  const [x] = toCanvas(e), aw = film.cols * film.cw;
+  slider.at = Math.max(0, Math.min(1, (x - film.ox) / aw));
+}
+function drawSlider(f) {                             // your picture on the left of the line, the art on the right
+  const aw = f.cols * f.cw, ah = f.rows * f.ch, sx = Math.round(f.ox + slider.at * aw), d = f.dpr || 1;
+  ctx.save(); ctx.beginPath(); ctx.rect(f.ox, f.oy, sx - f.ox, ah); ctx.clip(); ctx.drawImage(photoFor(f), f.ox, f.oy); ctx.restore();
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fillRect(sx - d, f.oy, 2 * d, ah);
+  const cy = f.oy + ah / 2, r = 15 * d;
+  ctx.beginPath(); ctx.arc(sx, cy, r, 0, Math.PI * 2); ctx.fillStyle = "rgba(12,10,18,0.78)"; ctx.fill();
+  ctx.lineWidth = 1.5 * d; ctx.strokeStyle = "rgba(255,255,255,0.92)"; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx - 4 * d, cy - 5 * d); ctx.lineTo(sx - 9 * d, cy); ctx.lineTo(sx - 4 * d, cy + 5 * d);
+  ctx.moveTo(sx + 4 * d, cy - 5 * d); ctx.lineTo(sx + 9 * d, cy); ctx.lineTo(sx + 4 * d, cy + 5 * d); ctx.stroke();
+  ctx.font = `600 ${11 * d}px ${FONT}`; ctx.textBaseline = "top"; ctx.fillStyle = "rgba(255,255,255,0.85)";
+  const label = (s, x, align) => { ctx.textAlign = align; const w = ctx.measureText(s).width + 12 * d, bx = align === "left" ? x : x - w;
+    ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, f.oy + 8 * d, w, 20 * d, 6 * d) : ctx.rect(bx, f.oy + 8 * d, w, 20 * d); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillText(s, align === "left" ? x + 6 * d : x - 6 * d, f.oy + 12 * d) };
+  if (sx - f.ox > 70 * d) label("PHOTO", f.ox + 8 * d, "left");
+  if (f.ox + aw - sx > 70 * d) label("ASCII", f.ox + aw - 8 * d, "right");
+  ctx.restore();
 }
 
 // ------------------------------------------------------------------ controls
@@ -1039,6 +1616,30 @@ for (const id of ["bright", "contrast"]) {
   const el = $(id); el.value = state[id]; $(id + "-v").textContent = state[id];
   let h; el.addEventListener("input", () => { $(id + "-v").textContent = el.value; clearTimeout(h); h = setTimeout(() => { state[id] = +el.value; saveSettings(); refresh(true) }, 160) });
 }
+// colour themes: off (the picture's own colours) by default
+const themeColor = $("theme-color");
+function themeUI() { $("theme-row").hidden = state.theme !== "custom"; $("theme-sw").style.setProperty("--c", state.themeColor); $("theme-hex").textContent = state.themeColor; themeColor.value = state.themeColor }
+seg("theme", "theme", () => { themeUI(); refresh(true) });
+themeUI();
+$("theme").querySelector('[data-v="custom"]').addEventListener("click", () => { try { if (themeColor.showPicker) themeColor.showPicker(); else themeColor.click() } catch (e) { try { themeColor.click() } catch (e2) {} } });
+let tcol; themeColor.addEventListener("input", () => {
+  state.themeColor = themeColor.value.toLowerCase(); if (state.theme !== "custom") { state.theme = "custom"; setPressed("theme", "custom") }
+  themeUI(); clearTimeout(tcol); tcol = setTimeout(() => { saveSettings(); refresh(true) }, 150);
+});
+// cut out the person: off by default
+seg("cut", "cut", () => refresh(false));
+// live camera
+$("camera").addEventListener("click", () => { if (cam.on) stopCamera(true); else startCamera(cam.facing) });
+$("snap").addEventListener("click", snapshot);
+$("flip").addEventListener("click", () => startCamera(cam.facing === "user" ? "environment" : "user"));
+$("cam-stop").addEventListener("click", () => stopCamera(true));
+document.addEventListener("visibilitychange", () => { if (document.hidden && cam.on) stopCamera(true) });   // the camera turns off when you leave the page
+// the slider
+$("slider").addEventListener("click", () => setSlider(!slider.on));
+// GIF and share
+$("save-gif").addEventListener("click", saveGif);
+$("share").addEventListener("click", () => { const m = $("share-menu"), open = m.hidden; m.hidden = !open; $("share").setAttribute("aria-expanded", open ? "true" : "false") });
+for (const b of $("share-menu").querySelectorAll("button")) b.addEventListener("click", () => share(b.dataset.v));
 $("reset").addEventListener("click", () => { for (const id of ["bright", "contrast"]) { state[id] = 0; $(id).value = 0; $(id + "-v").textContent = 0 } saveSettings(); refresh(true) });
 $("replay").addEventListener("click", () => show(false));
 $("sample").addEventListener("click", () => { sampleAt = (sampleAt + 1) % SAMPLES.length; const [n, make] = SAMPLES[sampleAt]; useImage(make(), "sample: " + n) });
@@ -1083,13 +1684,18 @@ addEventListener("drop", e => { if (!hasFiles(e)) return; e.preventDefault(); de
 addEventListener("paste", e => { const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith("image/")); if (f) readFile(f) });
 addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey || document.activeElement?.tagName === "INPUT" || exporting) return;
-  if (e.key === "r" || e.key === "R") show(false);
+  if ((e.key === "r" || e.key === "R") && !cam.on) show(false);
   if ((e.key === "f" || e.key === "F") && !fullBtn.hidden) toggleFull();
 });
 const toCanvas = e => { const b = view.getBoundingClientRect(); return [(e.clientX - b.left) * view.width / b.width, (e.clientY - b.top) * view.height / b.height] };
-view.addEventListener("pointermove", e => { if (e.pointerType !== "mouse") return; [pointer.x, pointer.y] = toCanvas(e); pointer.on = true; $("hint").style.opacity = 0 });
+view.addEventListener("pointermove", e => { if (slider.drag) { slideTo(e); return } if (e.pointerType !== "mouse") return; [pointer.x, pointer.y] = toCanvas(e); pointer.on = true; $("hint").style.opacity = 0 });
 view.addEventListener("pointerleave", () => { pointer.on = false });
-view.addEventListener("pointerdown", e => { const [x, y] = toCanvas(e); ripples.push({ x, y, t: performance.now() }); if (ripples.length > 5) ripples.shift() });
+view.addEventListener("pointerdown", e => {
+  if (cam.on) return;
+  if (slider.on) { slider.drag = true; try { view.setPointerCapture(e.pointerId) } catch (x) {} slideTo(e); return }
+  const [x, y] = toCanvas(e); ripples.push({ x, y, t: performance.now() }); if (ripples.length > 5) ripples.shift();
+});
+for (const ev of ["pointerup", "pointercancel"]) view.addEventListener(ev, () => { slider.drag = false });
 let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
   if (!art || exporting || performance.now() - fsAt < 900) return;
   if (touch && innerWidth === stableW) return;       // phones: only the address bar moved
@@ -1098,9 +1704,25 @@ let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() 
 
 // ------------------------------------------------------------------ start
 const fontReady = document.fonts ? Promise.race([document.fonts.load(`800 16px "JetBrains Mono"`).then(() => document.fonts.ready), sleep(2500)]) : Promise.resolve();
+const monoLoaded = () => { try { return [...document.fonts].some(f => /JetBrains Mono/.test(f.family) && String(f.weight) === "800" && f.status === "loaded") } catch (e) { return true } };
 fontReady.catch(() => {}).then(() => {
+  const late = !!document.fonts && !monoLoaded();
   buildGlyphs(); startWorker();
   useImage(sampleSunset(), "sample: sunset");
+  if (late) {                                        // the letters' font came late: measure the letters again once it is here
+    let done = false;
+    const again = () => {
+      if (done || !monoLoaded()) return;
+      done = true; document.fonts.removeEventListener("loadingdone", again);
+      const before = G.ink; buildGlyphs();
+      if (G.ink.every((v, i) => Math.abs(v - before[i]) < 1e-6)) return;   // the same letters as before: nothing to redo
+      alphaCache.clear(); arts.clear();
+      if (worker) worker.postMessage({ type: "init", G });
+      if (!exporting && !cam.on) refresh(false);
+    };
+    document.fonts.addEventListener("loadingdone", again);
+    document.fonts.load(`800 16px "JetBrains Mono"`).then(again, () => {});
+  }
 });
 })();
 </script>
