@@ -236,8 +236,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
           <span class="label">Look</span>
           <div class="seg c2" id="look">
             <button type="button" data-v="true">Photo-true<small>on its own colour</small></button>
-            <button type="button" data-v="glow">Glow<small>colour on black</small></button>
-            <button type="button" data-v="mono">Mono<small>white on black</small></button>
+            <button type="button" data-v="glow">Glow<small>colour on dark</small></button>
+            <button type="button" data-v="mono">Mono<small>black &amp; white</small></button>
             <button type="button" data-v="paper">Paper<small>ink on paper</small></button>
           </div>
         </div>
@@ -307,9 +307,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); out
   </main>
 
   <section class="how">
-    <div><h3>Shading</h3><p>Each spot's brightness picks one of 70 shades made of letters, numbers and symbols, from <code>$ @ B % 8 &amp; W M</code> for the brightest to <code>; : , " ^ ` ' .</code> for the darkest.</p></div>
+    <div><h3>Shading</h3><p>Each spot's brightness picks one of 70 shades made of letters, numbers and symbols, from <code>$ @ B % 8 &amp; W M</code> for the brightest to <code>^ " ~ ! ; _ :</code> for the darkest (on Paper the other way round).</p></div>
     <div><h3>Shape</h3><p>Where a spot holds an edge, the character whose own shape lines up with it wins, from all 95 on your keyboard: <code>/ \ | _ ( ) [ ] { } &lt; &gt; L J 7 V</code></p></div>
-    <div><h3>Colour</h3><p>Each character is coloured, and sits on a dim version of the same colour, so that every spot shows exactly the colour of your picture there.</p></div>
+    <div><h3>Colour</h3><p>Each character is coloured and sits on a dimmer shade of the same colour (on Paper: dark ink on lightly shaded paper), mixed so that every spot shows exactly the colour of your picture there.</p></div>
   </section>
 </div>
 
@@ -326,10 +326,13 @@ const ALNUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ";
 const CLASSIC = " .:-=+*#%@", CLASSIC_LINES = "/\\|_()<>^v'`";
 const SETS = { every: [RAMP_EVERY, ALL.join("")], alnum: [ALNUM, ALNUM], classic: [CLASSIC, CLASSIC + CLASSIC_LINES] };
 const AW = 8, AH = 16, NPX = AW * AH;               // each spot is looked at as 8 x 16 pixels
-const COLS = { small: 150, medium: 100, big: 64 };   // characters across
+const SIZE_STEP = { small: 1, medium: 1.6, big: 2.5 };   // letter sizes, as parts of the smallest letters that still draw sharply
+const COHERENT = 0.3;                                // how well a character's shape must match an edge to be used for it
 const SPEED = { quick: 3.2, normal: 5.6, slow: 8.8 };   // seconds the formation takes
 const T_START = 0.6, FLY = [1.0, 1.9], HOLD = 2.6, FPS = 30;
 const TINT = 0.40;                                   // a character's background, as a part of its colour
+const HALO = 0.12;                                   // Glow and Mono: the faint light behind a character, as a part of its cell's light
+const SHADE = 0.40;                                  // Paper: how much of a cell's darkness the paper round its character takes
 const PAPER = [0.863, 0.799, 0.687];                 // the Paper look's paper, as light
 const FONT = "'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace";
 const MUXER = "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js";
@@ -379,12 +382,18 @@ function buildGlyphs() {
   }
   G = { K, n: NPX, AW, AH, ink, norm };
 }
-const inkCache = new Map();
-function inkAt(cw, ch) {                             // how much ink each character has at the size it is drawn
-  const key = cw + "x" + ch; if (inkCache.has(key)) return inkCache.get(key);
-  const d = drawGlyphStrip(cw, ch), K = ALL.length, out = new Float32Array(K);
-  for (let g = 0; g < K; g++) { let s = 0; for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) s += d[(y * cw * K + g * cw + x) * 4 + 3]; out[g] = s / (255 * cw * ch) }
-  inkCache.set(key, out); return out;
+// each character's ink, pixel by pixel, at the size it is drawn, and how much ink it has in all
+const alphaCache = new Map();
+function glyphAlpha(cw, ch) {
+  const key = cw + "x" + ch; if (alphaCache.has(key)) return alphaCache.get(key);
+  const d = drawGlyphStrip(cw, ch), K = ALL.length, n = cw * ch, a = new Float32Array(K * n), ink = new Float32Array(K);
+  for (let g = 0; g < K; g++) {
+    let s = 0;
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const v = d[(y * cw * K + g * cw + x) * 4 + 3] / 255; a[g * n + y * cw + x] = v; s += v }
+    ink[g] = s / n;
+  }
+  if (alphaCache.size > 12) alphaCache.clear();
+  const out = { a, ink, n }; alphaCache.set(key, out); return out;
 }
 
 // ------------------------------------------------------------------ picture -> characters (runs in a worker)
@@ -395,6 +404,7 @@ function convertCore(G, m) {
     let v = (i / 255 - 0.5) * m.contrast + 0.5 + m.bright; v = v < 0 ? 0 : v > 1 ? 1 : v;
     adj[i] = v; lut[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   }
+  const enc = v => v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
   const tone = new Float32Array(N), con = new Float32Array(N), lin = new Float32Array(N * 3), light = new Float32Array(n);
   const look = (R, Gr, B) => { const r = adj[R], g = adj[Gr], b = adj[B], mx = r > g ? (r > b ? r : b) : (g > b ? g : b); return 0.5 * (0.299 * r + 0.587 * g + 0.114 * b) + 0.5 * mx };
   for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
@@ -406,38 +416,47 @@ function convertCore(G, m) {
     const mean = s / n; tone[c] = mean; con[c] = Math.sqrt(Math.max(0, s2 / n - mean * mean));
     lin[c * 3] = lr / n; lin[c * 3 + 1] = lg / n; lin[c * 3 + 2] = lb / n;
   }
-  const sorted = tone.slice().sort();
-  const lo = sorted[Math.floor((N - 1) * 0.01)], hi0 = sorted[Math.floor((N - 1) * 0.997)], hi = hi0 - lo > 1e-3 ? hi0 : lo + 1e-3;
+  // how much ink every spot wants, as a part of the densest character's
+  const want = new Float32Array(N);
+  if (m.paper) {                                     // a print: the darkest colour channel decides the ink
+    for (let c = 0; c < N; c++) { let d = 0; for (let k = 0; k < 3; k++) { const v = 1 - enc(lin[c * 3 + k]); if (v > d) d = v } want[c] = 0.05 + 0.95 * d }
+  } else {                                           // light: the spot's brightness, stretched over the picture
+    const sorted = tone.slice().sort();
+    const lo = sorted[Math.floor((N - 1) * 0.01)], hi0 = sorted[Math.floor((N - 1) * 0.997)], hi = hi0 - lo > 1e-3 ? hi0 : lo + 1e-3;
+    for (let c = 0; c < N; c++) { let T = (tone[c] - lo) / (hi - lo); T = T < 0 ? 0 : T > 1 ? 1 : T; want[c] = 0.25 + 0.75 * Math.pow(T, 0.8) }
+  }
   let top = 0; for (let g = 0; g < K; g++) if (m.ramp[g] && G.ink[g] > top) top = G.ink[g];
   const toneG = new Float32Array(K), ramp = [], cand = [];
-  for (let g = 0; g < K; g++) { toneG[g] = G.ink[g] / (top || 1); if (m.ramp[g]) ramp.push(g); if (m.allow[g]) cand.push(g) }
+  for (let g = 0; g < K; g++) { toneG[g] = G.ink[g] / (top || 1); if (m.ramp[g]) ramp.push(g); if (m.allow[g] && g !== 0) cand.push(g) }
+  let densest = ramp[0]; for (const g of ramp) if (toneG[g] > toneG[densest]) densest = g;
   const glyph = new Uint8Array(N), edge = new Float32Array(N), pool = new Uint8Array(K), words = m.words, wl = words ? words.length : 0, sqn = Math.sqrt(n);
   for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
-    const c = r * cols + q;
-    let T = (tone[c] - lo) / (hi - lo); T = T < 0 ? 0 : T > 1 ? 1 : T; T = 0.12 + 0.88 * Math.pow(T, 0.8);   // how bright it should look
-    const want = m.invert ? 1 - T : T;               // on paper, dark spots get the most ink
+    const c = r * cols + q, w = want[c], lowest = m.paper ? w - 0.03 : -1;   // a print may not get less ink than it needs
     let e = (con[c] - 0.015) / 0.03; e = e < 0 ? 0 : e > 1 ? 1 : e; e = Math.pow(e, 1.5); edge[c] = e;   // 0 flat .. 1 a clear edge
     if (wl) { glyph[c] = words[c % wl]; continue }
-    let best = 0, bs = Infinity;
-    if (e < 0.02) {                                  // flat: one of the characters with the right amount of ink
-      let bd = Infinity, cnt = 0;                    // (the colour is worked out for whichever one it is, so it stays exact)
-      for (let k = 0; k < ramp.length; k++) { const g = ramp[k]; if (g === 0 && want > 0.04) continue; const d = Math.abs(toneG[g] - want); if (d < bd) bd = d }
-      for (let k = 0; k < ramp.length; k++) { const g = ramp[k]; if (g === 0 && want > 0.04) continue; if (Math.abs(toneG[g] - want) <= bd + 0.03) pool[cnt++] = g }
-      let h = Math.imul(r + 1, 0x9e3779b1) ^ Math.imul(q + 7, 0x85ebca77); h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h ^= h >>> 13;
-      best = cnt ? pool[(h >>> 0) % cnt] : 0;
-    } else {                                         // an edge: also the character whose shape lines up with it
+    // the characters with the right amount of ink, mixed so that every kind shows up
+    let bd = Infinity, cnt = 0, best = densest;
+    for (let k = 0; k < ramp.length; k++) { const g = ramp[k]; if ((g === 0 && w > 0.04) || toneG[g] < lowest) continue; const d = Math.abs(toneG[g] - w); if (d < bd) bd = d }
+    const tol = bd + 0.05 + 0.5 * Math.max(0, bd - 0.1);   // where the set has no character this light, a mix of its lightest ones
+    if (bd < Infinity) for (let k = 0; k < ramp.length; k++) { const g = ramp[k]; if ((g === 0 && w > 0.04) || toneG[g] < lowest) continue; if (Math.abs(toneG[g] - w) <= tol) pool[cnt++] = g }
+    if (cnt) { let h = Math.imul(r + 1, 0x9e3779b1) ^ Math.imul(q + 7, 0x85ebca77); h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h ^= h >>> 13; best = pool[(h >>> 0) % cnt] }
+    // a clear edge: the character whose own shape lines up with it, but only one with nearly the same ink
+    if (e >= 0.02) {
       let k = 0; const mean = tone[c];
       for (let y = 0; y < AH; y++) { let o = ((r * AH + y) * W + q * AW) * 4; for (let x = 0; x < AW; x++, o += 4) light[k++] = look(px[o], px[o + 1], px[o + 2]) - mean }
-      const den = con[c] * sqn || 1e-6;
+      const den = con[c] * sqn || 1e-6, win = Math.max(0.07, bd + 0.02);
+      let bs = Infinity, bg = -1, bm = 0;
       for (let j = 0; j < cand.length; j++) {
-        const g = cand[j], base = g * n; let dot = 0;
+        const g = cand[j], d = toneG[g] - w;
+        if (d > win || d < -win || toneG[g] < lowest) continue;
+        const base = g * n; let dot = 0;
         for (let i = 0; i < n; i++) dot += light[i] * G.norm[base + i];
-        const match = (m.invert ? -dot : dot) / den, d = toneG[g] - want;
+        const match = (m.paper ? -dot : dot) / den;
         let sc = 4 * d * d - 0.6 * e * match;
         if (!m.ramp[g]) sc += 0.08 + 2 * (1 - e);   // the extra shapes only where there is an edge
-        if (g === 0 && want > 0.04) sc += 1;
-        if (sc < bs) { bs = sc; best = g }
+        if (sc < bs) { bs = sc; bg = g; bm = match }
       }
+      if (bg >= 0 && bm >= m.coherent) best = bg;  // a real edge, not just texture
     }
     glyph[c] = best;
   }
@@ -476,64 +495,75 @@ function pixels(img, W, H, bg = "#000") {
   x.fillStyle = bg; x.fillRect(0, 0, W, H); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, W, H);
   return x.getImageData(0, 0, W, H).data;
 }
-const rowsFor = cols => Math.max(4, Math.round(cols * ((state.img.naturalHeight || state.img.height) / (state.img.naturalWidth || state.img.width)) * (AW / AH)));
 function wordCodes() {
   const t = (state.words || "").replace(/\s+/g, "").replace(/[^\x21-\x7e]/g, "") || "GLYPHFALL";
   return Uint8Array.from(t, ch => ch.charCodeAt(0) - 32);
 }
 const arts = new Map();
-async function makeArt() {
-  const invert = state.look === "paper", cols = COLS[state.size], rows = rowsFor(cols);
-  const key = [state.size, state.chars, state.chars === "words" ? state.words : "", invert, state.bright, state.contrast].join("|");
+async function makeArt(cols, rows) {
+  const paper = state.look === "paper";
+  const key = [cols, rows, state.chars, state.chars === "words" ? state.words : "", paper, state.bright, state.contrast].join("|");
   if (arts.has(key)) return arts.get(key);
   const ramp = new Uint8Array(ALL.length), allow = new Uint8Array(ALL.length);
   const [r, a] = SETS[state.chars] || SETS.every;
   for (const ch of r) ramp[ch.charCodeAt(0) - 32] = 1;
   for (const ch of a) allow[ch.charCodeAt(0) - 32] = 1;
-  const px = pixels(state.img, cols * AW, rows * AH, invert ? "#fff" : "#000");
-  const out = await runConvert({ px, cols, rows, invert, ramp, allow, words: state.chars === "words" ? wordCodes() : null,
+  const words = state.chars === "words" ? wordCodes() : null;
+  const px = pixels(state.img, cols * AW, rows * AH, paper ? "#fff" : "#000");
+  const out = await runConvert({ px, cols, rows, paper, ramp, allow, words: words && words.slice(), coherent: COHERENT,
     bright: state.bright / 100, contrast: Math.pow(2, state.contrast / 50) });
-  const art = { cols, rows, glyph: out.glyph, lin: out.lin, edge: out.edge };
+  const rampList = words ? [...new Set(words)] : ALL.map((_, g) => g).filter(g => ramp[g]);
+  const art = { cols, rows, glyph: out.glyph, lin: out.lin, edge: out.edge, rampList };
+  if (arts.size > 24) arts.clear();
   arts.set(key, art); return art;
 }
 
 // ------------------------------------------------------------------ colours and the finished art
-function colours(art, look, cw, ch) {
-  const N = art.cols * art.rows, cov = inkAt(cw, ch), fore = new Uint8ClampedArray(N * 3), back = look === "true" ? new Uint8ClampedArray(N * 3) : null;
+// Every character cell gets a colour for its character and one for its background, so that the cell, seen
+// as a whole, is exactly the picture's own light (Mono: its brightness; Paper: printed on this paper).
+// All in linear light. The background takes a fixed part of the cell's light and the character the rest;
+// where a character can't get any brighter (or, on paper, any darker), its background makes up the rest.
+function colours(art, look, ink) {
+  const N = art.cols * art.rows, L = art.lin, fore = new Float32Array(N * 3), back = new Float32Array(N * 3);
+  const mono = look === "mono", paper = look === "paper", share = look === "true" ? TINT : paper ? SHADE : HALO;
   for (let i = 0; i < N; i++) {
-    const cv = cov[art.glyph[i]], L = [art.lin[i * 3], art.lin[i * 3 + 1], art.lin[i * 3 + 2]];
-    if (look === "true") {                           // the cell shows exactly the picture's colour, on average
-      for (let k = 0; k < 3; k++) {
-        let b = L[k] * TINT, f = cv > 1e-3 ? (L[k] - b * (1 - cv)) / cv : L[k];
-        f = clamp01(f); if (cv < 0.999) b = clamp01((L[k] - f * cv) / (1 - cv));
-        fore[i * 3 + k] = toS(f); back[i * 3 + k] = toS(b);
+    const cv = ink[art.glyph[i]], j = i * 3, y = mono ? 0.2126 * L[j] + 0.7152 * L[j + 1] + 0.0722 * L[j + 2] : 0;
+    for (let k = 0; k < 3; k++) {
+      const v = mono ? y : L[j + k];
+      let f, b, top = 1;
+      if (paper) {                                   // dark ink on paper that is shaded a little round it
+        const P = PAPER[k], t = P * v; top = P;
+        b = P - share * (P - t); f = cv > 1e-4 ? (t - b * (1 - cv)) / cv : P;
+        if (cv <= 1e-4) b = t; else if (f < 0) { f = 0; b = t / (1 - cv) }
+      } else {                                       // a lit character on a dimmer background of its own colour
+        b = v * share; f = cv > 1e-4 ? (v - b * (1 - cv)) / cv : v;
+        if (cv <= 1e-4) b = v; else if (f > 1) { f = 1; b = (v - cv) / (1 - cv) }
       }
-    } else if (look === "glow" || look === "mono") {
-      const y = look === "mono" ? 0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2] : 0;
-      const C = look === "mono" ? [y, y * 0.98, y * 0.94] : L;
-      const v = Math.max(C[0], C[1], C[2]) || 1e-4, boost = Math.min(Math.max(0.9 / v, 1), 1 / Math.max(cv, 0.12));
-      for (let k = 0; k < 3; k++) fore[i * 3 + k] = toS(C[k] * boost);
-    } else {                                         // paper: dark ink in the picture's own colour
-      const v = Math.max(L[0], L[1], L[2]) || 1e-4, y = 0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2];
-      const sat = v > 0 ? 1 - Math.min(1, y / v) : 0;
-      for (let k = 0; k < 3; k++) fore[i * 3 + k] = toS((L[k] / v) * (0.06 + 0.3 * sat) + 0.015);
+      fore[j + k] = f < 0 ? 0 : f > top ? top : f; back[j + k] = b < 0 ? 0 : b > top ? top : b;
     }
   }
   return { fore, back };
 }
+const ENC = new Uint8Array(4096);                    // linear light -> sRGB levels
+for (let i = 0; i < 4096; i++) ENC[i] = toS(i / 4095);
 function renderArt(art, look, cw) {
-  const ch = cw * 2, c = document.createElement("canvas"); c.width = art.cols * cw; c.height = art.rows * ch;
-  const x = c.getContext("2d"), { fore, back } = colours(art, look, cw, ch);
-  x.fillStyle = look === "paper" ? "#efe7d8" : "#000"; x.fillRect(0, 0, c.width, c.height);
-  x.font = `800 ${ch * 0.8}px ${FONT}`; x.textAlign = "center"; x.textBaseline = "middle";
-  const N = art.cols * art.rows;
-  for (let i = 0; i < N; i++) {
-    const r = (i / art.cols) | 0, q = i - r * art.cols, X = q * cw, Y = r * ch;
-    if (back) { x.fillStyle = `rgb(${back[i * 3]},${back[i * 3 + 1]},${back[i * 3 + 2]})`; x.fillRect(X, Y, cw, ch) }
-    const g = art.glyph[i]; if (!g) continue;
-    x.fillStyle = `rgb(${fore[i * 3]},${fore[i * 3 + 1]},${fore[i * 3 + 2]})`;
-    x.fillText(ALL[g], X + cw / 2, Y + ch / 2 + ch * 0.03);
+  // characters are mixed with their backgrounds in linear light, pixel by pixel, so every cell's average is exact
+  const ch = cw * 2, W = art.cols * cw, H = art.rows * ch, ga = glyphAlpha(cw, ch), n = ga.n, A = ga.a;
+  const { fore, back } = colours(art, look, ga.ink);
+  const img = new ImageData(W, H), px = img.data;
+  for (let r = 0; r < art.rows; r++) for (let q = 0; q < art.cols; q++) {
+    const i = r * art.cols + q, base = art.glyph[i] * n, j = i * 3;
+    const b0 = back[j] * 4095, b1 = back[j + 1] * 4095, b2 = back[j + 2] * 4095;
+    const d0 = fore[j] * 4095 - b0, d1 = fore[j + 1] * 4095 - b1, d2 = fore[j + 2] * 4095 - b2;
+    for (let y = 0; y < ch; y++) {
+      let o = ((r * ch + y) * W + q * cw) * 4; const ai = base + y * cw;
+      for (let x = 0; x < cw; x++, o += 4) {
+        const al = A[ai + x];
+        px[o] = ENC[(b0 + d0 * al + 0.5) | 0]; px[o + 1] = ENC[(b1 + d1 * al + 0.5) | 0]; px[o + 2] = ENC[(b2 + d2 * al + 0.5) | 0]; px[o + 3] = 255;
+      }
+    }
   }
+  const c = document.createElement("canvas"); c.width = W; c.height = H; c.getContext("2d").putImageData(img, 0, 0);
   return c;
 }
 
@@ -556,27 +586,29 @@ function makeFilm(art, look, cw, W, H, ox, oy, opt = {}) {
   for (let i = 0; i < N; i++) {
     const r = (i / cols) | 0, q = i - r * cols, rnd = Math.random();
     let d;
-    if (way === "down") d = r / rows + 0.035 * Math.sin(q * 0.21 + r * 0.05) + 0.05 * rnd;
-    else if (way === "up") d = 1 - r / rows + 0.035 * Math.sin(q * 0.21 + r * 0.05) + 0.05 * rnd;
-    else if (way === "out") d = Math.hypot(q - cx, (r - cy) * 2) / far + 0.06 * rnd;
-    else if (way === "outline") d = art.edge[i] > 0.3 ? 0.42 * (0.75 * r / rows + 0.25 * rnd) : 0.45 + 0.55 * Math.pow(rnd, 0.85);
+    // a soft, wavy front with only a little scatter, so no gaps linger behind it
+    if (way === "down") d = 0.97 * r / rows + 0.03 * Math.sin(q * 0.21 + r * 0.05) + 0.018 * rnd;
+    else if (way === "up") d = 0.97 * (1 - r / rows) + 0.03 * Math.sin(q * 0.21 + r * 0.05) + 0.018 * rnd;
+    else if (way === "out") d = 0.97 * Math.hypot(q - cx, (r - cy) * 2) / far + 0.025 * rnd;
+    else if (way === "outline") d = art.edge[i] > 0.3 ? 0.42 * (0.85 * r / rows + 0.15 * rnd) : 0.46 + 0.52 * (0.9 * r / rows + 0.1 * rnd);   // the outline first, then the rest fills in from the top
     else if (way === "type") d = (r + q / cols) / rows;
     else d = rnd;
     land[i] = T_START + build * clamp01(d);
   }
-  const order = Uint32Array.from({ length: N }, (_, i) => i).sort((a, b) => land[a] - land[b]);
-  // the sparks: each flies to one character and arrives as it lands
-  const lit = []; for (let i = 0; i < N; i++) if (art.glyph[i] || look === "true") lit.push(i);
-  const P = Math.min(lit.length, opt.particles ?? (phone ? 2200 : 5200));
+  // the sparks: one for every character (on very big grids one for every two or three side by side);
+  // a character appears when its spark lands, so none appears without one
+  const budget = opt.particles ?? (phone ? 2400 : 7000), per = Math.max(1, Math.ceil(N / budget)), runs = Math.ceil(cols / per), P = runs * rows;
   const p = { to: new Float32Array(P * 2), from: new Float32Array(P * 2), mid: new Float32Array(P * 2), arrive: new Float32Array(P), fly: new Float32Array(P), drift: new Float32Array(P * 5) };
-  for (let k = 0; k < P; k++) {
-    const i = lit[(Math.random() * lit.length) | 0], r = (i / cols) | 0, q = i - r * cols;
-    const tx = ox + (q + 0.5) * cw, ty = oy + (r + 0.5) * ch;
-    p.to[k * 2] = tx; p.to[k * 2 + 1] = ty; p.arrive[k] = land[i]; p.fly[k] = FLY[0] + Math.random() * (FLY[1] - FLY[0]);
+  for (let r = 0, k = 0; r < rows; r++) for (let j = 0; j < runs; j++, k++) {
+    const q0 = j * per, q1 = Math.min(cols, q0 + per);
+    let a = Infinity; for (let q = q0; q < q1; q++) a = Math.min(a, land[r * cols + q]);
+    for (let q = q0; q < q1; q++) land[r * cols + q] = a;
+    const tx = ox + (q0 + q1) / 2 * cw, ty = oy + (r + 0.5) * ch;
+    p.to[k * 2] = tx; p.to[k * 2 + 1] = ty; p.arrive[k] = a; p.fly[k] = FLY[0] + Math.random() * (FLY[1] - FLY[0]);
     let sx, sy, vy;
     if (way === "down") { sx = Math.random() * W; sy = (-0.25 + Math.random() * 0.55) * H; vy = (0.01 + Math.random() * 0.03) * H }
     else if (way === "up") { sx = Math.random() * W; sy = (0.7 + Math.random() * 0.55) * H; vy = -(0.01 + Math.random() * 0.03) * H }
-    else if (way === "out") { const a = Math.random() * Math.PI * 2, rad = (0.55 + Math.random() * 0.4) * Math.hypot(W, H) / 2; sx = W / 2 + Math.cos(a) * rad; sy = H / 2 + Math.sin(a) * rad; vy = 0 }
+    else if (way === "out") { const t = Math.random() * Math.PI * 2, rad = (0.55 + Math.random() * 0.4) * Math.hypot(W, H) / 2; sx = W / 2 + Math.cos(t) * rad; sy = H / 2 + Math.sin(t) * rad; vy = 0 }
     else { sx = Math.random() * W; sy = Math.random() * H; vy = (Math.random() - 0.5) * 0.01 * H }
     p.drift.set([sx, sy, vy, Math.random() * 6.3, 0.004 * W + Math.random() * 0.012 * W], k * 5);
     const s = driftAt(p, k, p.arrive[k] - p.fly[k]);
@@ -584,7 +616,8 @@ function makeFilm(art, look, cw, W, H, ox, oy, opt = {}) {
     const dx = tx - s[0], dy = ty - s[1], bend = (Math.random() - 0.5) * 0.6;
     p.mid[k * 2] = (s[0] + tx) / 2 - dy * bend; p.mid[k * 2 + 1] = (s[1] + ty) / 2 + dx * bend;
   }
-  const ds = Math.max(8, Math.round(cw * 2.6));
+  const order = Uint32Array.from({ length: N }, (_, i) => i).sort((a, b) => land[a] - land[b]);
+  const ds = Math.max(8, Math.round(Math.min(cw * 2.6, 0.03 * Math.min(W, H))));   // a spark's glow, never too big to draw quickly
   const dot = paper ? sprite(ds, [90, 52, 30], 0, true) : sprite(ds, [255, 168, 92], 0.7);
   const hot = paper ? sprite(ds, [150, 60, 20], 0, true) : sprite(ds, [255, 214, 160], 1);
   return { art, look, paper, cols, rows, cw, ch, W, H, ox, oy, artC, done, dctx, land, order, next: 0, p, P, dot, hot, ds,
@@ -680,21 +713,36 @@ function drawFilm(f, x, t, fx) {
 // ------------------------------------------------------------------ the stage
 let film = null, art = null, raf = 0, t0 = 0, token = 0, exporting = false;
 const pointer = { on: false, x: 0, y: 0 }, ripples = [];
-function geometry(a) {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5), stage = $("stage");
+let stableW = innerWidth, stableH = innerHeight, stageCw = 6;
+function room() {                                    // the device pixels the art may use on the stage
+  const dpr = Math.min(window.devicePixelRatio || 1, 3), stage = $("stage");
   const n = narrow() && document.fullscreenElement !== stage;
-  const cssW = stage.clientWidth, side = n ? 10 : 24, topH = 50, botH = 38;
-  const availW = (cssW - 2 * side) * dpr;
-  const availH = (n ? Math.max(260, innerHeight * 0.72) : stage.clientHeight - topH - botH) * dpr;
-  const cw = Math.max(2, Math.floor(Math.min(availW / a.cols, availH / (a.rows * 2))));
-  const artW = a.cols * cw, artH = a.rows * cw * 2, W = Math.round(cssW * dpr);
-  const H = n ? artH + Math.round((topH + botH) * dpr) : Math.round(stage.clientHeight * dpr);
-  const oy = Math.round(topH * dpr + Math.max(0, (H - (topH + botH) * dpr - artH) / 2));
-  return { dpr, cw, W, H, ox: Math.round((W - artW) / 2), oy, n };
+  if (!touch || innerWidth !== stableW) { stableW = innerWidth; stableH = innerHeight }   // phones: the address bar coming and going is no new layout
+  const side = n ? 10 : 24, topH = 50, botH = 38;
+  return { dpr, n, topH, botH, w: Math.max(80, (stage.clientWidth - 2 * side) * dpr),
+           h: Math.max(80, (n ? Math.max(260, stableH * 0.72) : stage.clientHeight - topH - botH) * dpr) };
+}
+function gridFor(size) {                             // how many characters fit at this letter size
+  const R = room(), iw = state.img.naturalWidth || state.img.width, ih = state.img.naturalHeight || state.img.height;
+  let cw = Math.round(Math.max(5, (touch ? 2.4 : 3.5) * R.dpr) * SIZE_STEP[size]);  // never under 5 screen pixels across, so every character keeps its shape
+  let cols = Math.floor(Math.min(R.w / cw, R.h * iw / (cw * ih)));
+  const capped = cols > 240;
+  cols = Math.max(16, Math.min(240, cols));
+  const rows = Math.max(4, Math.round(cols * (ih / iw) * (AW / AH)));
+  const fit = Math.max(2, Math.min(Math.floor(R.w / cols), Math.floor(R.h / (rows * 2))));
+  cw = capped ? fit : Math.min(cw, fit);             // at most 240 across: then the letters grow to fill the stage
+  return { cols, rows, cw };
+}
+function geometry(a, cw) {
+  const R = room(), stage = $("stage");
+  const artW = a.cols * cw, artH = a.rows * cw * 2, W = Math.round(stage.clientWidth * R.dpr);
+  const H = R.n ? artH + Math.round((R.topH + R.botH) * R.dpr) : Math.round(stage.clientHeight * R.dpr);
+  const oy = Math.round(R.topH * R.dpr + Math.max(0, (H - (R.topH + R.botH) * R.dpr - artH) / 2));
+  return { dpr: R.dpr, cw, W, H, ox: Math.round((W - artW) / 2), oy, n: R.n };
 }
 function show(instant) {
   if (!art) return;
-  const g = geometry(art);
+  const g = geometry(art, stageCw);
   film = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy);
   film.dpr = g.dpr; film.img = state.img;
   view.width = g.W; view.height = g.H;
@@ -737,16 +785,17 @@ async function refresh(instant) {
   if (!state.img || !G) return;
   const my = ++token; busy(true);
   try {
-    const a = await makeArt();
+    const grid = gridFor(state.size);
+    const a = await makeArt(grid.cols, grid.rows);
     if (my !== token) return;
-    art = a; await nextPaint(); if (my !== token) return;
+    art = a; stageCw = grid.cw; await nextPaint(); if (my !== token) return;
     show(instant);
   } catch (e) { toast("That picture couldn't be turned into characters. Try another one."); console.error(e) }
   finally { if (my === token) busy(false) }
 }
 function counts() {
   if (!state.img) return;
-  for (const b of $("size").querySelectorAll("button")) b.querySelector("small").textContent = `${COLS[b.dataset.v]}×${rowsFor(COLS[b.dataset.v])}`;
+  for (const b of $("size").querySelectorAll("button")) { const g = gridFor(b.dataset.v); b.querySelector("small").textContent = `${g.cols}×${g.rows}` }
 }
 function useImage(img, name) {
   state.img = img; state.name = name; arts.clear(); counts(); refresh(false);
@@ -897,7 +946,7 @@ function asText(a) {
 }
 async function saveImage() {
   if (!art || exporting) return;
-  let cw = Math.max(6, Math.min(40, Math.round(2400 / art.cols)));
+  let cw = Math.max(6, Math.min(64, Math.round(2400 / art.cols)));
   while (cw > 3 && art.cols * cw * art.rows * cw * 2 > 15e6) cw--;           // phones cap a picture's size
   busy(true); await nextPaint();
   const c = renderArt(art, state.look, cw);
@@ -937,7 +986,7 @@ async function saveVideo() {
   try {
     const g = videoGeometry(art), canvas = document.createElement("canvas"); canvas.width = g.W; canvas.height = g.H;
     const x = canvas.getContext("2d");
-    const f = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy, { particles: phone ? 3200 : 6000 });
+    const f = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy);
     const frames = Math.ceil((f.end + HOLD) * FPS);
     let blob = null, ext = "mp4";
     const enc = await pickEncoder(g.W, g.H, Math.round(Math.min(20e6, Math.max(8e6, 1.2e8 / g.cw))));
@@ -1020,7 +1069,7 @@ document.addEventListener("fullscreenchange", () => {
   fsAt = performance.now();
   const on = document.fullscreenElement === stageEl;
   fullBtn.textContent = on ? "✕ Exit full screen" : "⤢ Full screen";
-  setTimeout(() => { if (art && !exporting) show(!on) }, 150);      // full screen plays the formation again, big
+  setTimeout(() => { if (art && !exporting) { counts(); refresh(!on) } }, 150);   // full screen plays the formation again, bigger
 });
 $("file").addEventListener("change", e => { readFile(e.target.files[0]); e.target.value = "" });
 $("save-video").addEventListener("click", saveVideo);
@@ -1050,7 +1099,11 @@ const toCanvas = e => { const b = view.getBoundingClientRect(); return [(e.clien
 view.addEventListener("pointermove", e => { if (e.pointerType !== "mouse") return; [pointer.x, pointer.y] = toCanvas(e); pointer.on = true; $("hint").style.opacity = 0 });
 view.addEventListener("pointerleave", () => { pointer.on = false });
 view.addEventListener("pointerdown", e => { const [x, y] = toCanvas(e); ripples.push({ x, y, t: performance.now() }); if (ripples.length > 5) ripples.shift() });
-let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (art && !exporting && performance.now() - fsAt > 900) show(true) }, 250) });
+let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
+  if (!art || exporting || performance.now() - fsAt < 900) return;
+  if (touch && innerWidth === stableW) return;       // phones: only the address bar moved
+  counts(); refresh(true);
+}, 250) });
 
 // ------------------------------------------------------------------ start
 const fontReady = document.fonts ? Promise.race([document.fonts.load(`800 16px "JetBrains Mono"`).then(() => document.fonts.ready), sleep(2500)]) : Promise.resolve();
