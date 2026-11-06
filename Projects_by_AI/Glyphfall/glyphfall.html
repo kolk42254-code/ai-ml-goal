@@ -5,16 +5,19 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;700;800&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: a darkroom. A full-height stage where the picture rains down fills the right; the name, the
-   headline and the controls sit in a narrow column on the left (on phones: headline, stage, controls). */
+   headline, the photo picker and the controls sit in a narrow column on the left
+   (on phones: headline, picker, stage, controls). */
 :root {
   --ink: #0c0a12;          /* the room */
   --panel: #15121f;        /* the control column */
-  --panel-2: #1d1929;      /* pressed / hovered controls */
+  --panel-2: #1d1929;      /* controls */
   --line: #2b2540;         /* hairlines */
   --fg: #efe9f7;           /* text */
   --muted: #9d94b4;        /* secondary text */
   --ember: #ffb15e;        /* the spark: particles, active controls */
   --ember-deep: #e2742e;   /* the spark's shadow side */
+  --stage: #07060b;        /* behind the art */
+  --paper: #efe7d8;        /* the Paper look */
   --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --body: "Manrope", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -35,110 +38,134 @@ body::before {          /* a faint ember haze behind everything */
   background: radial-gradient(60% 60% at 30% 20%, color-mix(in srgb, var(--ember) 14%, transparent), transparent 70%),
               radial-gradient(40% 50% at 85% 10%, color-mix(in srgb, #7a5cff 12%, transparent), transparent 70%);
 }
-.wrap { max-width: 1280px; margin: 0 auto }
+.wrap { max-width: 1320px; margin: 0 auto }
 
 /* ---- header ---- */
-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 22px 8px; flex-wrap: wrap }
+header { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; padding-block: 22px 8px; flex-wrap: wrap }
 .brand { display: flex; align-items: baseline; gap: 12px }
 .brand b { font-family: var(--display); font-weight: 400; font-size: 34px; letter-spacing: .01em; line-height: 1 }
 .brand b i { color: var(--ember) }
 .brand span { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase }
 .privacy { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px }
-.privacy::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #5fd39a; box-shadow: 0 0 10px #5fd39a }
+.privacy::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #5fd39a; box-shadow: 0 0 10px #5fd39a; flex: none }
 
-.hero { padding-block: 6px 4px }
+.hero { padding-block: 6px 2px }
 .hero h1 {
   font-family: var(--display); font-weight: 400; margin: 0;
   font-size: clamp(40px, 4.4vw, 64px); line-height: .98; letter-spacing: -.01em; text-wrap: balance;
 }
-.hero h1 em { font-style: italic; color: var(--ember);
-  text-shadow: 0 0 28px color-mix(in srgb, var(--ember) 45%, transparent) }
+.hero h1 em { font-style: italic; color: var(--ember); text-shadow: 0 0 28px color-mix(in srgb, var(--ember) 45%, transparent) }
 .hero p { color: var(--muted); max-width: 46ch; margin: 12px 0 0; font-size: 15px }
 
-/* ---- the studio: stage + controls ---- */
-.studio { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 22px; align-items: start; padding-top: 8px }
-.side { display: flex; flex-direction: column; gap: 18px; min-width: 0 }
+/* ---- the studio: picker + controls on the left, the stage on the right ---- */
+.studio { display: grid; grid-template-columns: 372px minmax(0, 1fr); gap: 22px; align-items: start; padding-top: 8px }
+.side { display: flex; flex-direction: column; gap: 16px; min-width: 0 }
 @media (max-width: 960px) {
-  .studio { grid-template-columns: minmax(0, 1fr) }
+  .studio { grid-template-columns: minmax(0, 1fr); gap: 16px }
   .side { display: contents }
-  .hero { order: 1 } .stage { order: 2 } .panel { order: 3 }
+  .hero { order: 1 } .pick { order: 2 } .stage { order: 3 } .panel { order: 4 }
 }
+
+/* the photo picker: the file input itself covers it, so a tap or click lands right on it */
+.pick {
+  position: relative; border: 1.5px dashed color-mix(in srgb, var(--ember) 60%, var(--line)); border-radius: 16px;
+  padding: 20px 16px; text-align: center; display: grid; gap: 4px;
+  background: color-mix(in srgb, var(--ember) 6%, transparent); transition: background .2s, border-color .2s, transform .2s;
+}
+.pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; z-index: 1 }
+.pick:hover, .pick.over, .pick:focus-within { background: color-mix(in srgb, var(--ember) 14%, transparent); border-color: var(--ember); transform: translateY(-1px) }
+.pick:focus-within { outline: 2px solid var(--ember); outline-offset: 3px }
+.pick .glyphs { font-family: var(--mono); font-size: 13px; color: var(--ember); letter-spacing: .28em }
+.pick strong { font-size: 17px; font-weight: 700 }
+.pick small { color: var(--muted); font-size: 12.5px }
+.pick .cta { justify-self: center; margin-top: 8px; font-weight: 700; font-size: 14px; color: #1a0d03; padding: 9px 18px; border-radius: 999px;
+  background: linear-gradient(180deg, var(--ember), var(--ember-deep)); box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--ember) 70%, transparent) }
 
 .stage {
   position: sticky; top: calc(12px + env(safe-area-inset-top, 0px)); min-width: 0; border-radius: 18px; overflow: hidden;
-  background: #07060b; border: 1px solid var(--line); cursor: crosshair;
-  height: max(480px, calc(100vh - 96px)); display: grid; place-items: center;
+  background: var(--stage); border: 1px solid var(--line); touch-action: manipulation;
+  height: max(480px, calc(100vh - 96px));
   box-shadow: 0 40px 120px -40px color-mix(in srgb, var(--ember) 30%, transparent);
 }
-.stage canvas { display: block; max-width: 100%; image-rendering: auto }
-@media (max-width: 960px) { .stage { position: relative; top: 0; height: auto; min-height: 300px; padding-block: 0 34px } }
-.hint { position: absolute; top: 12px; right: 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
-  color: color-mix(in srgb, var(--fg) 65%, transparent); background: color-mix(in srgb, #000 45%, transparent);
-  padding: 3px 8px; border-radius: 6px; pointer-events: none; transition: opacity .6s }
-@media (hover: none) { .hint { display: none } }
-.stage .meta {
-  position: absolute; left: 14px; bottom: 12px; right: 14px; display: flex; justify-content: space-between; gap: 12px;
-  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: color-mix(in srgb, var(--fg) 70%, transparent);
-  pointer-events: none; text-shadow: 0 1px 4px #000;
+.stage.paper { background: var(--paper) }
+.stage canvas { display: block; width: 100%; height: 100%; cursor: crosshair }
+@media (max-width: 960px) { .stage { position: relative; top: 0; height: auto } .stage canvas { height: auto } }
+.stage:fullscreen { height: 100%; border-radius: 0; border: 0 }
+.stage:fullscreen canvas { height: 100% }
+.chip {
+  position: absolute; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; border-radius: 7px; padding: 4px 9px;
+  color: color-mix(in srgb, var(--fg) 80%, transparent); background: color-mix(in srgb, #000 50%, transparent); white-space: nowrap;
 }
-.stage .meta span { background: color-mix(in srgb, #000 45%, transparent); padding: 3px 8px; border-radius: 6px; white-space: nowrap }
-.stage .meta span:first-child { flex-shrink: 0 }
-.stage .meta span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis }
-@media (max-width: 480px) { .stage .meta { font-size: 10px; left: 8px; right: 8px; bottom: 8px } }
-.busy {
-  position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 13px;
-  color: var(--ember); background: color-mix(in srgb, #000 55%, transparent); letter-spacing: .1em;
+.tools { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 2; pointer-events: none }
+.tools .chip { position: static; pointer-events: auto }
+.tool { border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent); cursor: pointer; font: 600 12px var(--body); padding: 6px 11px;
+  display: inline-flex; align-items: center; gap: 5px;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none }
+.tool:hover { border-color: var(--ember); color: var(--fg) }
+.tool[aria-pressed="true"] { border-color: var(--ember); color: var(--ember) }
+.tool:disabled { opacity: .5; cursor: progress }
+.hint { top: 12px; right: 12px; pointer-events: none; transition: opacity .6s; z-index: 2 }
+.meta { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; justify-content: space-between; gap: 10px; pointer-events: none }
+.meta .chip { position: static }
+.meta .chip:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis }
+@media (max-width: 480px) { .meta { left: 8px; right: 8px; bottom: 8px } .meta .chip { font-size: 10px; padding: 3px 7px } }
+.busy, .export {
+  position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 12px; text-align: center;
+  background: color-mix(in srgb, #000 58%, transparent); font-family: var(--mono); font-size: 12.5px; color: var(--ember); letter-spacing: .08em; z-index: 3;
 }
+.spin { width: 26px; height: 26px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--ember) 25%, transparent); border-top-color: var(--ember); animation: spin .8s linear infinite }
+@keyframes spin { to { transform: rotate(1turn) } }
+.bar { width: min(320px, 70%); height: 6px; border-radius: 6px; background: color-mix(in srgb, var(--ember) 18%, transparent); overflow: hidden }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ember-deep), var(--ember)) }
+.export button { font: 600 13px var(--body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer }
 
+/* ---- controls ---- */
 .panel {
   background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px;
   display: flex; flex-direction: column; gap: 18px; min-width: 0;
 }
-.drop {
-  border: 1.5px dashed color-mix(in srgb, var(--ember) 55%, var(--line)); border-radius: 14px;
-  padding: 20px 16px; text-align: center; cursor: pointer; display: grid; gap: 6px;
-  background: color-mix(in srgb, var(--ember) 5%, transparent); transition: background .2s, border-color .2s, transform .2s;
-}
-.drop:hover, .drop:focus-visible, .drop.over { background: color-mix(in srgb, var(--ember) 13%, transparent); border-color: var(--ember); outline: none; transform: translateY(-1px) }
-.drop strong { font-size: 15.5px }
-.drop small { color: var(--muted); font-size: 12.5px }
-.drop .glyphs { font-family: var(--mono); font-size: 13px; color: var(--ember); letter-spacing: .3em }
-
-.group { display: grid; gap: 8px }
-.label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted) }
-.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
-.seg.two { grid-template-columns: repeat(2, 1fr) }
+.group { display: grid; gap: 8px; min-width: 0 }
+.label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px }
+.label output { color: var(--fg); letter-spacing: .04em }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px }
+.seg.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 .seg button {
   font: inherit; font-size: 13px; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line);
-  border-radius: 10px; padding: 9px 6px; cursor: pointer; display: grid; gap: 1px; justify-items: center; line-height: 1.2;
+  border-radius: 10px; padding: 9px 6px; cursor: pointer; display: grid; gap: 2px; justify-items: center; line-height: 1.2; min-width: 0;
   transition: border-color .15s, background .15s;
 }
-.seg button small { font-family: var(--mono); font-size: 10px; color: var(--muted) }
+.seg button small { font-family: var(--mono); font-size: 10px; color: var(--muted); overflow-wrap: anywhere }
 .seg button:hover { border-color: color-mix(in srgb, var(--ember) 50%, var(--line)) }
-.seg button[aria-pressed="true"] {
-  border-color: var(--ember); background: color-mix(in srgb, var(--ember) 16%, var(--panel-2));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ember) 40%, transparent);
-}
+.seg button[aria-pressed="true"] { border-color: var(--ember); background: color-mix(in srgb, var(--ember) 16%, var(--panel-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ember) 40%, transparent) }
 .seg button[aria-pressed="true"] small { color: var(--ember) }
-.seg .size-s { font-family: var(--mono); font-size: 9px } .seg .size-m { font-family: var(--mono); font-size: 12px } .seg .size-l { font-family: var(--mono); font-size: 16px }
-.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.seg .gl { font-family: var(--mono); color: var(--ember); letter-spacing: .04em }
+.size-s { font-size: 9px } .size-m { font-size: 12px } .size-l { font-size: 16px }
+.words { width: 100%; font: 600 14px var(--mono); color: var(--fg); background: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px }
+.words:focus { outline: 2px solid var(--ember); outline-offset: 1px; border-color: transparent }
+input[type=range] { width: 100%; accent-color: var(--ember) }
+.adjust { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px }
+.save { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 .btn {
   font: inherit; font-weight: 600; font-size: 13.5px; border-radius: 11px; padding: 11px 10px; cursor: pointer;
-  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); display: grid; gap: 1px; line-height: 1.25; justify-items: center;
 }
+.btn small { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight: 500 }
 .btn:hover { border-color: var(--muted) }
+.btn:disabled { opacity: .5; cursor: progress }
 .btn.primary { grid-column: 1 / -1; background: linear-gradient(180deg, var(--ember), var(--ember-deep)); color: #1a0d03; border-color: transparent;
   box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--ember) 70%, transparent) }
+.btn.primary small { color: #3b1d06 }
 .btn.primary:hover { filter: brightness(1.06) }
-button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px }
 .note { font-size: 12px; color: var(--muted); margin: 0 }
+.link { font: inherit; font-size: 12.5px; color: var(--ember); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px }
 
 /* ---- how it works ---- */
 .how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 34px; border-top: 1px solid var(--line); padding-top: 26px }
 @media (max-width: 760px) { .how { grid-template-columns: minmax(0, 1fr) } }
 .how h3 { font-family: var(--display); font-weight: 400; font-size: 24px; margin: 0 0 6px }
-.how p { margin: 0; color: var(--muted); font-size: 14px; max-width: 46ch }
-.how code { font-family: var(--mono); color: var(--ember); font-size: 13px }
+.how p { margin: 0; color: var(--muted); font-size: 14px; max-width: 48ch }
+.how code { font-family: var(--mono); color: var(--ember); font-size: 12.5px; overflow-wrap: anywhere }
 
 /* ---- whole-page drop overlay and toast ---- */
 .overlay {
@@ -149,79 +176,131 @@ button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px }
 .toast {
   position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
   background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); padding: 10px 16px; border-radius: 12px;
-  font-size: 13.5px; max-width: calc(100vw - 32px); box-shadow: 0 20px 50px -20px #000;
+  font-size: 13.5px; width: max-content; max-width: calc(100vw - 32px); box-shadow: 0 20px 50px -20px #000;
 }
-@media (prefers-reduced-motion: reduce) { .drop, .seg button { transition: none } }
+@media (prefers-reduced-motion: reduce) { .pick, .seg button { transition: none } .spin { animation-duration: 3s } }
 </style>
 
 <div class="wrap">
   <header>
     <div class="brand"><b>Glyph<i>fall</i></b><span>Photo → ASCII</span></div>
-    <div class="privacy">Your image never leaves this browser</div>
+    <div class="privacy">Your picture never leaves this device</div>
   </header>
 
   <main class="studio">
     <div class="side">
-    <section class="hero">
-      <h1>Drop a picture. Watch it <em>rain back</em> as characters.</h1>
-      <p>Every character is chosen from your image: denser ones where it is brighter, slashes and brackets along its edges, each in the image's own colour. Then thousands of sparks fly in and build it.</p>
-    </section>
+      <section class="hero">
+        <h1>Drop a picture. Watch it <em>rain back</em> as characters.</h1>
+        <p>Letters, numbers and symbols are chosen for every spot of your picture, by brightness and by shape, each in the picture's own colour. Then thousands of sparks fly in and build it.</p>
+      </section>
 
-    <aside class="panel">
-      <label class="drop" id="drop" for="file" tabindex="0">
-        <span class="glyphs">.:-=+*#%@</span>
-        <strong>Drop an image here</strong>
-        <small>or click to choose one · paste works too · JPG, PNG, WebP, GIF</small>
-      </label>
-      <input type="file" id="file" accept="image/*" hidden>
+      <div class="pick" id="pick">
+        <input type="file" id="file" accept="image/*" aria-label="Choose a picture">
+        <span class="glyphs" aria-hidden="true">$@B%8&amp;WM#*oahk</span>
+        <strong id="pick-title">Drop a picture here</strong>
+        <small id="pick-sub">or click to choose one · you can paste one too</small>
+        <span class="cta" id="pick-cta" hidden>Choose a photo</span>
+      </div>
 
-      <div class="group">
-        <span class="label">Letter size</span>
-        <div class="seg" id="size">
-          <button type="button" data-v="small" aria-pressed="false"><span class="size-s">@#%</span>Small<small>—</small></button>
-          <button type="button" data-v="medium" aria-pressed="true"><span class="size-m">@#%</span>Medium<small>—</small></button>
-          <button type="button" data-v="big" aria-pressed="false"><span class="size-l">@#</span>Big<small>—</small></button>
+      <aside class="panel" aria-label="Settings">
+        <div class="group">
+          <span class="label">Letter size</span>
+          <div class="seg" id="size">
+            <button type="button" data-v="small"><span class="gl size-s">@#%</span>Small<small>—</small></button>
+            <button type="button" data-v="medium"><span class="gl size-m">@#%</span>Medium<small>—</small></button>
+            <button type="button" data-v="big"><span class="gl size-l">@#</span>Big<small>—</small></button>
+          </div>
         </div>
-      </div>
 
-      <div class="group">
-        <span class="label">How it forms</span>
-        <div class="seg" id="way">
-          <button type="button" data-v="down" aria-pressed="true">Top down<small>falls from above</small></button>
-          <button type="button" data-v="up" aria-pressed="false">Bottom up<small>rises from below</small></button>
-          <button type="button" data-v="out" aria-pressed="false">From centre<small>grows outward</small></button>
+        <div class="group">
+          <span class="label">Characters</span>
+          <div class="seg c2" id="chars">
+            <button type="button" data-v="every">Every kind<small>Aa 0-9 $@%&amp;#</small></button>
+            <button type="button" data-v="alnum">Letters &amp; numbers<small>A–Z a–z 0–9</small></button>
+            <button type="button" data-v="classic">Classic<small>. : - = + * # % @</small></button>
+            <button type="button" data-v="words">Your words<small>type your own</small></button>
+          </div>
+          <input class="words" id="words" type="text" maxlength="40" placeholder="Type a word, a name or a line" autocomplete="off" spellcheck="false" hidden>
         </div>
-      </div>
 
-      <div class="group">
-        <span class="label">Look</span>
-        <div class="seg two" id="look">
-          <button type="button" data-v="true" aria-pressed="true">Photo-true<small>on its own colour</small></button>
-          <button type="button" data-v="glow" aria-pressed="false">Glow<small>on black</small></button>
+        <div class="group">
+          <span class="label">Look</span>
+          <div class="seg c2" id="look">
+            <button type="button" data-v="true">Photo-true<small>on its own colour</small></button>
+            <button type="button" data-v="glow">Glow<small>colour on black</small></button>
+            <button type="button" data-v="mono">Mono<small>white on black</small></button>
+            <button type="button" data-v="paper">Paper<small>ink on paper</small></button>
+          </div>
         </div>
-      </div>
 
-      <div class="actions">
-        <button type="button" class="btn primary" id="replay">Play the formation again</button>
-        <button type="button" class="btn" id="copy">Copy as text</button>
-        <button type="button" class="btn" id="sample">Show sample</button>
-      </div>
-      <p class="note">Tip: Small letters show the most detail; Big letters look the most like ASCII art.</p>
-    </aside>
+        <div class="group">
+          <span class="label">How it forms</span>
+          <div class="seg" id="way">
+            <button type="button" data-v="down">Top down</button>
+            <button type="button" data-v="up">Bottom up</button>
+            <button type="button" data-v="out">From centre</button>
+            <button type="button" data-v="outline">Outline first</button>
+            <button type="button" data-v="type">Typewriter</button>
+            <button type="button" data-v="sparkle">Sparkle</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <span class="label">Speed</span>
+          <div class="seg" id="speed">
+            <button type="button" data-v="quick">Quick<small>3 s</small></button>
+            <button type="button" data-v="normal">Normal<small>6 s</small></button>
+            <button type="button" data-v="slow">Slow<small>9 s</small></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <span class="label">Adjust <button type="button" class="link" id="reset">Reset</button></span>
+          <div class="adjust">
+            <label class="group"><span class="label">Brightness <output id="bright-v">0</output></span><input type="range" id="bright" min="-50" max="50" value="0" step="1"></label>
+            <label class="group"><span class="label">Contrast <output id="contrast-v">0</output></span><input type="range" id="contrast" min="-50" max="50" value="0" step="1"></label>
+          </div>
+        </div>
+
+        <div class="group">
+          <span class="label">Save</span>
+          <div class="save" id="save">
+            <button type="button" class="btn primary" id="save-video">Save video<small>MP4 of the formation</small></button>
+            <button type="button" class="btn" id="save-image">Save image<small>PNG, full size</small></button>
+            <button type="button" class="btn" id="save-text">Save text<small>.txt file</small></button>
+          </div>
+          <p class="note" id="save-note" hidden>Saving files isn't available in this view. Open the page in claude.ai or in your browser to save.</p>
+        </div>
+
+        <div class="save">
+          <button type="button" class="btn" id="copy">Copy as text</button>
+          <button type="button" class="btn" id="sample">Another sample</button>
+        </div>
+      </aside>
     </div>
 
-    <div class="stage" id="stage" aria-label="The ASCII art">
-      <canvas id="view" aria-label="Your image as ASCII art"></canvas>
-      <div class="hint" id="hint" hidden>Move your pointer over the picture</div>
-      <div class="meta"><span id="m-grid">—</span><span id="m-name">sample image</span></div>
-      <div class="busy" id="busy" hidden>MAKING THE CHARACTERS…</div>
+    <div class="stage" id="stage">
+      <canvas id="view" aria-label="Your picture as ASCII art"></canvas>
+      <div class="tools">
+        <button type="button" class="chip tool" id="replay" title="Play the formation again (R)">↻ Replay</button>
+        <button type="button" class="chip tool" id="peek" aria-pressed="false" title="Tap to see your picture, tap again to go back (or hold)"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1.7a6.3 6.3 0 0 1 0 12.6z" fill="currentColor"/></svg>Compare</button>
+        <button type="button" class="chip tool" id="full" title="Full screen (F)" hidden>⤢ Full screen</button>
+      </div>
+      <div class="chip hint" id="hint" hidden>Move over the picture · click for a ripple</div>
+      <div class="meta"><span class="chip" id="m-grid">—</span><span class="chip" id="m-name">sample: sunset</span></div>
+      <div class="busy" id="busy" hidden><span class="spin"></span><span>MAKING THE CHARACTERS…</span></div>
+      <div class="export" id="export" hidden>
+        <span id="export-text">MAKING YOUR VIDEO · 0%</span>
+        <div class="bar"><i id="export-bar"></i></div>
+        <button type="button" id="export-cancel">Cancel</button>
+      </div>
     </div>
   </main>
 
   <section class="how">
-    <div><h3>Shading</h3><p>The image is cut into cells. Each cell's brightness picks a character by how much ink it has: <code>. : - = + * # % @</code></p></div>
-    <div><h3>Edges</h3><p>Where a cell holds a real edge, a character whose shape lines up with it wins instead: <code>/ \ | _ ( ) &lt; &gt; ^ v</code></p></div>
-    <div><h3>Colour</h3><p>Each character sits on a dim version of the cell's colour and makes up the rest, so from a step back it matches your picture.</p></div>
+    <div><h3>Shading</h3><p>Each spot's brightness picks one of 70 shades made of letters, numbers and symbols, from <code>$ @ B % 8 &amp; W M</code> for the brightest to <code>; : , " ^ ` ' .</code> for the darkest.</p></div>
+    <div><h3>Shape</h3><p>Where a spot holds an edge, the character whose own shape lines up with it wins, from all 95 on your keyboard: <code>/ \ | _ ( ) [ ] { } &lt; &gt; L J 7 V</code></p></div>
+    <div><h3>Colour</h3><p>Each character is coloured, and sits on a dim version of the same colour, so that every spot shows exactly the colour of your picture there.</p></div>
   </section>
 </div>
 
@@ -231,309 +310,451 @@ button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px }
 <script>
 (() => {
 "use strict";
-// ------------------------------------------------------------------ settings
-const RAMP = " .:-=+*#%@", LINES = "/\\|_()<>^v'`", CHARS = RAMP + LINES;
-const AW = 8, AH = 16;                                       // each cell is analysed at 8 x 16 pixels
-const COLS = { small: 150, medium: 100, big: 62 };          // characters across for each letter size
-const TINT = 0.40;                                           // background brightness, as a part of the colour
-const T_BUILD = 0.6, BUILD = 5.6, FLY = [1.0, 1.9];          // seconds
+// ------------------------------------------------------------------ characters and settings
+const ALL = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i));   // " " .. "~", every ASCII character
+const RAMP_EVERY = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";  // 70 shades
+const ALNUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ";
+const CLASSIC = " .:-=+*#%@", CLASSIC_LINES = "/\\|_()<>^v'`";
+const SETS = { every: [RAMP_EVERY, ALL.join("")], alnum: [ALNUM, ALNUM], classic: [CLASSIC, CLASSIC + CLASSIC_LINES] };
+const AW = 8, AH = 16, NPX = AW * AH;               // each spot is looked at as 8 x 16 pixels
+const COLS = { small: 150, medium: 100, big: 64 };   // characters across
+const SPEED = { quick: 3.2, normal: 5.6, slow: 8.8 };   // seconds the formation takes
+const T_START = 0.6, FLY = [1.0, 1.9], HOLD = 2.6, FPS = 30;
+const TINT = 0.40;                                   // a character's background, as a part of its colour
+const PAPER = [0.863, 0.799, 0.687];                 // the Paper look's paper, as light
 const FONT = "'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace";
+const MUXER = "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
 const phone = matchMedia("(max-width: 700px)").matches;
+const narrow = () => matchMedia("(max-width: 960px)").matches;
 
 const $ = id => document.getElementById(id);
 const view = $("view"), ctx = view.getContext("2d");
-const pointer = { on: false, x: 0, y: 0 };
-const state = { img: null, name: "sample image", size: "medium", way: "down", look: "true", art: null, t0: 0, raf: 0 };
+const DEFAULTS = { size: "medium", chars: "every", words: "", look: "true", way: "down", speed: "normal", bright: 0, contrast: 0 };
+const OPTIONS = { size: ["small", "medium", "big"], chars: ["every", "alnum", "classic", "words"], look: ["true", "glow", "mono", "paper"],
+                  way: ["down", "up", "out", "outline", "type", "sparkle"], speed: ["quick", "normal", "slow"] };
+const state = { img: null, name: "sample: sunset", ...DEFAULTS };
+try {
+  const old = JSON.parse(localStorage.getItem("glyphfall:v2") || "{}");
+  for (const k in OPTIONS) if (OPTIONS[k].includes(old[k])) state[k] = old[k];
+  for (const k of ["bright", "contrast"]) if (Number.isFinite(old[k])) state[k] = Math.max(-50, Math.min(50, Math.round(old[k])));
+  if (typeof old.words === "string") state.words = old.words.slice(0, 40);
+} catch (e) {}
+const saveSettings = () => { try { const { img, name, ...s } = state; localStorage.setItem("glyphfall:v2", JSON.stringify(s)) } catch (e) {} };
 
-// sRGB <-> linear light, as tables
 const LIN = new Float32Array(256);
 for (let i = 0; i < 256; i++) { const c = i / 255; LIN[i] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
 const toS = v => { v = v <= 0 ? 0 : v >= 1 ? 1 : v; return Math.round((v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055) * 255) };
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const nextPaint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 
 // ------------------------------------------------------------------ the characters, as small pictures
-let atlas = null;
-function buildAtlas() {
-  const c = document.createElement("canvas"); c.width = AW; c.height = AH;
+function drawGlyphStrip(cw, ch) {
+  const c = document.createElement("canvas"); c.width = cw * ALL.length; c.height = ch;
   const x = c.getContext("2d", { willReadFrequently: true });
-  const n = AW * AH, shape = [], norm = [], ink = [];
-  for (const ch of CHARS) {
-    x.clearRect(0, 0, AW, AH); x.fillStyle = "#fff";
-    x.font = `800 ${AH * 0.8}px ${FONT}`; x.textAlign = "center"; x.textBaseline = "middle";
-    x.fillText(ch, AW / 2, AH / 2 + 0.5);
-    const d = x.getImageData(0, 0, AW, AH).data, g = new Float32Array(n);
-    let s = 0; for (let i = 0; i < n; i++) { g[i] = d[i * 4 + 3] / 255; s += g[i] }
-    const m = s / n; ink.push(m);
-    const z = new Float32Array(n); let q = 0;                 // its shape: without its average, length 1
-    for (let i = 0; i < n; i++) { z[i] = g[i] - m; q += z[i] * z[i] }
-    q = Math.sqrt(q) || 1; for (let i = 0; i < n; i++) z[i] /= q;
-    shape.push(g); norm.push(z);
+  x.fillStyle = "#fff"; x.font = `800 ${ch * 0.8}px ${FONT}`; x.textAlign = "center"; x.textBaseline = "middle";
+  ALL.forEach((g, i) => { x.save(); x.beginPath(); x.rect(i * cw, 0, cw, ch); x.clip(); x.fillText(g, i * cw + cw / 2, ch / 2 + ch * 0.03); x.restore() });
+  return x.getImageData(0, 0, c.width, ch).data;
+}
+let G = null;                                        // the characters as seen at 8 x 16, for choosing them
+function buildGlyphs() {
+  const d = drawGlyphStrip(AW, AH), K = ALL.length, ink = new Float32Array(K), norm = new Float32Array(K * NPX);
+  for (let g = 0; g < K; g++) {
+    let s = 0;
+    for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) { const a = d[(y * AW * K + g * AW + x) * 4 + 3] / 255; norm[g * NPX + y * AW + x] = a; s += a }
+    const m = s / NPX; ink[g] = m; let q = 0;
+    for (let i = 0; i < NPX; i++) { const z = norm[g * NPX + i] - m; norm[g * NPX + i] = z; q += z * z }
+    q = Math.sqrt(q) || 1; for (let i = 0; i < NPX; i++) norm[g * NPX + i] /= q;   // its shape: no average, length 1
   }
-  const top = Math.max(...ink.slice(0, RAMP.length));
-  atlas = { shape, norm, ink, tone: ink.map(v => v / top) };
+  G = { K, n: NPX, AW, AH, ink, norm };
+}
+const inkCache = new Map();
+function inkAt(cw, ch) {                             // how much ink each character has at the size it is drawn
+  const key = cw + "x" + ch; if (inkCache.has(key)) return inkCache.get(key);
+  const d = drawGlyphStrip(cw, ch), K = ALL.length, out = new Float32Array(K);
+  for (let g = 0; g < K; g++) { let s = 0; for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) s += d[(y * cw * K + g * cw + x) * 4 + 3]; out[g] = s / (255 * cw * ch) }
+  inkCache.set(key, out); return out;
 }
 
-// ------------------------------------------------------------------ image -> characters and colours
-function convert(img, cols) {
-  const rows = Math.max(4, Math.round(cols * (img.height / img.width) * (AW / AH)));
-  const W = cols * AW, H = rows * AH;
-  const c = document.createElement("canvas"); c.width = W; c.height = H;
-  const x = c.getContext("2d", { willReadFrequently: true });
-  x.imageSmoothingQuality = "high"; x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
-  x.drawImage(img, 0, 0, W, H);
-  const px = x.getImageData(0, 0, W, H).data;
-  const N = cols * rows, n = AW * AH, K = CHARS.length, nr = RAMP.length;
-  const light = new Float32Array(n), lin = new Float32Array(N * 3), tone = new Float32Array(N);
-  const best = new Uint8Array(N), contrast = new Float32Array(N), match = new Float32Array(N * K);
+// ------------------------------------------------------------------ picture -> characters (runs in a worker)
+function convertCore(G, m) {
+  const K = G.K, n = G.n, AW = G.AW, AH = G.AH, cols = m.cols, rows = m.rows, W = cols * AW, N = cols * rows, px = m.px;
+  const adj = new Float32Array(256), lut = new Float32Array(256);
+  for (let i = 0; i < 256; i++) {                    // brightness and contrast, then linear light for colours
+    let v = (i / 255 - 0.5) * m.contrast + 0.5 + m.bright; v = v < 0 ? 0 : v > 1 ? 1 : v;
+    adj[i] = v; lut[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+  const tone = new Float32Array(N), con = new Float32Array(N), lin = new Float32Array(N * 3), light = new Float32Array(n);
+  const look = (R, Gr, B) => { const r = adj[R], g = adj[Gr], b = adj[B], mx = r > g ? (r > b ? r : b) : (g > b ? g : b); return 0.5 * (0.299 * r + 0.587 * g + 0.114 * b) + 0.5 * mx };
   for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
-    const cell = r * cols + q; let sum = 0, lr = 0, lg = 0, lb = 0, k = 0;
+    const c = r * cols + q; let s = 0, s2 = 0, lr = 0, lg = 0, lb = 0;
     for (let y = 0; y < AH; y++) {
       let o = ((r * AH + y) * W + q * AW) * 4;
-      for (let xx = 0; xx < AW; xx++, o += 4, k++) {
-        const R = px[o], G = px[o + 1], B = px[o + 2];
-        const v = (0.5 * (0.299 * R + 0.587 * G + 0.114 * B) + 0.5 * Math.max(R, G, B)) / 255; // vivid colours count as bright
-        light[k] = v; sum += v; lr += LIN[R]; lg += LIN[G]; lb += LIN[B];
+      for (let x = 0; x < AW; x++, o += 4) { const v = look(px[o], px[o + 1], px[o + 2]); s += v; s2 += v * v; lr += lut[px[o]]; lg += lut[px[o + 1]]; lb += lut[px[o + 2]] }
+    }
+    const mean = s / n; tone[c] = mean; con[c] = Math.sqrt(Math.max(0, s2 / n - mean * mean));
+    lin[c * 3] = lr / n; lin[c * 3 + 1] = lg / n; lin[c * 3 + 2] = lb / n;
+  }
+  const sorted = tone.slice().sort();
+  const lo = sorted[Math.floor((N - 1) * 0.01)], hi0 = sorted[Math.floor((N - 1) * 0.997)], hi = hi0 - lo > 1e-3 ? hi0 : lo + 1e-3;
+  let top = 0; for (let g = 0; g < K; g++) if (m.ramp[g] && G.ink[g] > top) top = G.ink[g];
+  const toneG = new Float32Array(K), ramp = [], cand = [];
+  for (let g = 0; g < K; g++) { toneG[g] = G.ink[g] / (top || 1); if (m.ramp[g]) ramp.push(g); if (m.allow[g]) cand.push(g) }
+  const glyph = new Uint8Array(N), edge = new Float32Array(N), pool = new Uint8Array(K), words = m.words, wl = words ? words.length : 0, sqn = Math.sqrt(n);
+  for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
+    const c = r * cols + q;
+    let T = (tone[c] - lo) / (hi - lo); T = T < 0 ? 0 : T > 1 ? 1 : T; T = 0.12 + 0.88 * Math.pow(T, 0.8);   // how bright it should look
+    const want = m.invert ? 1 - T : T;               // on paper, dark spots get the most ink
+    let e = (con[c] - 0.015) / 0.03; e = e < 0 ? 0 : e > 1 ? 1 : e; e = Math.pow(e, 1.5); edge[c] = e;   // 0 flat .. 1 a clear edge
+    if (wl) { glyph[c] = words[c % wl]; continue }
+    let best = 0, bs = Infinity;
+    if (e < 0.02) {                                  // flat: one of the characters with the right amount of ink
+      let bd = Infinity, cnt = 0;                    // (the colour is worked out for whichever one it is, so it stays exact)
+      for (let k = 0; k < ramp.length; k++) { const g = ramp[k]; if (g === 0 && want > 0.04) continue; const d = Math.abs(toneG[g] - want); if (d < bd) bd = d }
+      for (let k = 0; k < ramp.length; k++) { const g = ramp[k]; if (g === 0 && want > 0.04) continue; if (Math.abs(toneG[g] - want) <= bd + 0.03) pool[cnt++] = g }
+      let h = Math.imul(r + 1, 0x9e3779b1) ^ Math.imul(q + 7, 0x85ebca77); h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h ^= h >>> 13;
+      best = cnt ? pool[(h >>> 0) % cnt] : 0;
+    } else {                                         // an edge: also the character whose shape lines up with it
+      let k = 0; const mean = tone[c];
+      for (let y = 0; y < AH; y++) { let o = ((r * AH + y) * W + q * AW) * 4; for (let x = 0; x < AW; x++, o += 4) light[k++] = look(px[o], px[o + 1], px[o + 2]) - mean }
+      const den = con[c] * sqn || 1e-6;
+      for (let j = 0; j < cand.length; j++) {
+        const g = cand[j], base = g * n; let dot = 0;
+        for (let i = 0; i < n; i++) dot += light[i] * G.norm[base + i];
+        const match = (m.invert ? -dot : dot) / den, d = toneG[g] - want;
+        let sc = 4 * d * d - 0.6 * e * match;
+        if (!m.ramp[g]) sc += 0.08 + 2 * (1 - e);   // the extra shapes only where there is an edge
+        if (g === 0 && want > 0.04) sc += 1;
+        if (sc < bs) { bs = sc; best = g }
       }
     }
-    const mean = sum / n; tone[cell] = mean;
-    lin[cell * 3] = lr / n; lin[cell * 3 + 1] = lg / n; lin[cell * 3 + 2] = lb / n;
-    let ss = 0; for (let i = 0; i < n; i++) { light[i] -= mean; ss += light[i] * light[i] }
-    const ct = Math.sqrt(ss / n); contrast[cell] = ct;
-    const den = ct * Math.sqrt(n) || 1e-6;
-    for (let g = 0; g < K; g++) {
-      const z = atlas.norm[g]; let d = 0;
-      for (let i = 0; i < n; i++) d += light[i] * z[i];
-      match[cell * K + g] = d / den;
-    }
+    glyph[c] = best;
   }
-  const sorted = Float32Array.from(tone).sort();
-  const lo = sorted[Math.floor(N * 0.01)], hi = sorted[Math.min(N - 1, Math.floor(N * 0.997))] || lo + 1e-3;
-  const glyph = new Uint8Array(N), fore = new Uint8ClampedArray(N * 3), back = new Uint8ClampedArray(N * 3);
-  const glowFore = new Uint8ClampedArray(N * 3);
-  for (let cell = 0; cell < N; cell++) {
-    const tt = Math.min(1, Math.max(0, (tone[cell] - lo) / (hi - lo)));
-    const T = 0.12 + 0.88 * tt ** 0.8;                         // the brightness this cell should look
-    const e = Math.min(1, Math.max(0, (contrast[cell] - 0.015) / 0.03)) ** 1.5;   // 0 flat .. 1 a clear edge
-    let bi = 0, bs = Infinity;
-    for (let g = 0; g < K; g++) {
-      let s = 4 * (atlas.tone[g] - T) ** 2 - 0.6 * e * match[cell * K + g];
-      if (g >= nr) s += 0.08 + 2 * (1 - e);                   // line characters only on edges
-      if (g === 0 && T > 0.04) s += 1;                         // a blank only for black
-      if (s < bs) { bs = s; bi = g }
-    }
-    glyph[cell] = bi;
-    const cov = atlas.ink[bi];
-    for (let ch = 0; ch < 3; ch++) {
-      const L = lin[cell * 3 + ch];
-      let b = L * TINT, f = cov > 1e-3 ? (L - b * (1 - cov)) / cov : L;
-      f = Math.min(1, Math.max(0, f));
-      b = cov < 0.999 ? Math.min(1, Math.max(0, (L - f * cov) / (1 - cov))) : b;
-      fore[cell * 3 + ch] = toS(f); back[cell * 3 + ch] = toS(b);
-    }
-    const v = Math.max(lin[cell * 3], lin[cell * 3 + 1], lin[cell * 3 + 2]) || 1e-4;
-    const boost = Math.min(Math.max(0.9 / v, 1), 1 / Math.max(cov, 0.12));
-    for (let ch = 0; ch < 3; ch++) glowFore[cell * 3 + ch] = toS(lin[cell * 3 + ch] * boost);
-  }
-  return { cols, rows, glyph, fore, back, glowFore };
+  return { glyph, lin, edge };
+}
+let worker = null, jobs = 0;
+const pending = new Map();
+function startWorker() {
+  try {
+    const src = `"use strict";const convertCore=${convertCore.toString()};let G=null;
+onmessage=e=>{const m=e.data;if(m.type==="init"){G=m.G;return}
+try{const o=convertCore(G,m);o.id=m.id;postMessage(o,[o.glyph.buffer,o.lin.buffer,o.edge.buffer])}catch(err){postMessage({id:m.id,error:String(err)})}};`;
+    worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+    worker.onmessage = e => { const p = pending.get(e.data.id); if (!p) return; pending.delete(e.data.id); e.data.error ? p.reject(new Error(e.data.error)) : p.resolve(e.data) };
+    worker.onerror = () => { worker = null; for (const p of pending.values()) p.reject(new Error("worker")); pending.clear() };
+    worker.postMessage({ type: "init", G });
+  } catch (e) { worker = null }
+}
+function runConvert(m) {
+  if (!worker) return Promise.resolve(convertCore(G, m));
+  const copy = m.px.slice(0);                        // kept in case the worker fails
+  return new Promise((resolve, reject) => { const id = ++jobs; pending.set(id, { resolve, reject }); worker.postMessage({ ...m, type: "convert", id }, [m.px.buffer]) })
+    .catch(() => convertCore(G, { ...m, px: copy }));
 }
 
-// ------------------------------------------------------------------ the stage
-let film = null;
-function layout(a) {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  const stage = $("stage"), narrow = matchMedia("(max-width: 960px)").matches;
-  const maxW = stage.clientWidth - 2, maxH = narrow ? Math.max(300, innerHeight * 0.72) : stage.clientHeight - 2;
-  const cw = Math.max(2, Math.floor(Math.min(maxW / a.cols, maxH / (a.rows * 2)) * dpr));
-  return { cw, ch: cw * 2, dpr };
+// the picture, scaled down in halves so fine detail averages instead of flickering
+function pixels(img, W, H, bg = "#000") {
+  let src = img, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  while (w > W * 2 && h > H * 2) {
+    const c = document.createElement("canvas"); c.width = Math.ceil(w / 2); c.height = Math.ceil(h / 2);
+    const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, c.width, c.height);
+    src = c; w = c.width; h = c.height;
+  }
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d", { willReadFrequently: true });
+  x.fillStyle = bg; x.fillRect(0, 0, W, H); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, W, H);
+  return x.getImageData(0, 0, W, H).data;
+}
+const rowsFor = cols => Math.max(4, Math.round(cols * ((state.img.naturalHeight || state.img.height) / (state.img.naturalWidth || state.img.width)) * (AW / AH)));
+function wordCodes() {
+  const t = (state.words || "").replace(/\s+/g, "").replace(/[^\x21-\x7e]/g, "") || "GLYPHFALL";
+  return Uint8Array.from(t, ch => ch.charCodeAt(0) - 32);
+}
+const arts = new Map();
+async function makeArt() {
+  const invert = state.look === "paper", cols = COLS[state.size], rows = rowsFor(cols);
+  const key = [state.size, state.chars, state.chars === "words" ? state.words : "", invert, state.bright, state.contrast].join("|");
+  if (arts.has(key)) return arts.get(key);
+  const ramp = new Uint8Array(ALL.length), allow = new Uint8Array(ALL.length);
+  const [r, a] = SETS[state.chars] || SETS.every;
+  for (const ch of r) ramp[ch.charCodeAt(0) - 32] = 1;
+  for (const ch of a) allow[ch.charCodeAt(0) - 32] = 1;
+  const px = pixels(state.img, cols * AW, rows * AH, invert ? "#fff" : "#000");
+  const out = await runConvert({ px, cols, rows, invert, ramp, allow, words: state.chars === "words" ? wordCodes() : null,
+    bright: state.bright / 100, contrast: Math.pow(2, state.contrast / 50) });
+  const art = { cols, rows, glyph: out.glyph, lin: out.lin, edge: out.edge };
+  arts.set(key, art); return art;
 }
 
-function makeFilm(a) {
-  const { cw, ch, dpr } = layout(a);
-  const W = a.cols * cw, H = a.rows * ch;
-  view.width = W; view.height = H;
-  view.style.width = W / dpr + "px"; view.style.height = H / dpr + "px";
-  // the finished art, drawn once
-  const art = document.createElement("canvas"); art.width = W; art.height = H;
-  const x = art.getContext("2d");
-  const glow = state.look === "glow";
-  x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
+// ------------------------------------------------------------------ colours and the finished art
+function colours(art, look, cw, ch) {
+  const N = art.cols * art.rows, cov = inkAt(cw, ch), fore = new Uint8ClampedArray(N * 3), back = look === "true" ? new Uint8ClampedArray(N * 3) : null;
+  for (let i = 0; i < N; i++) {
+    const cv = cov[art.glyph[i]], L = [art.lin[i * 3], art.lin[i * 3 + 1], art.lin[i * 3 + 2]];
+    if (look === "true") {                           // the cell shows exactly the picture's colour, on average
+      for (let k = 0; k < 3; k++) {
+        let b = L[k] * TINT, f = cv > 1e-3 ? (L[k] - b * (1 - cv)) / cv : L[k];
+        f = clamp01(f); if (cv < 0.999) b = clamp01((L[k] - f * cv) / (1 - cv));
+        fore[i * 3 + k] = toS(f); back[i * 3 + k] = toS(b);
+      }
+    } else if (look === "glow" || look === "mono") {
+      const y = look === "mono" ? 0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2] : 0;
+      const C = look === "mono" ? [y, y * 0.98, y * 0.94] : L;
+      const v = Math.max(C[0], C[1], C[2]) || 1e-4, boost = Math.min(Math.max(0.9 / v, 1), 1 / Math.max(cv, 0.12));
+      for (let k = 0; k < 3; k++) fore[i * 3 + k] = toS(C[k] * boost);
+    } else {                                         // paper: dark ink in the picture's own colour
+      const v = Math.max(L[0], L[1], L[2]) || 1e-4, y = 0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2];
+      const sat = v > 0 ? 1 - Math.min(1, y / v) : 0;
+      for (let k = 0; k < 3; k++) fore[i * 3 + k] = toS((L[k] / v) * (0.06 + 0.3 * sat) + 0.015);
+    }
+  }
+  return { fore, back };
+}
+function renderArt(art, look, cw) {
+  const ch = cw * 2, c = document.createElement("canvas"); c.width = art.cols * cw; c.height = art.rows * ch;
+  const x = c.getContext("2d"), { fore, back } = colours(art, look, cw, ch);
+  x.fillStyle = look === "paper" ? "#efe7d8" : "#000"; x.fillRect(0, 0, c.width, c.height);
   x.font = `800 ${ch * 0.8}px ${FONT}`; x.textAlign = "center"; x.textBaseline = "middle";
-  const N = a.cols * a.rows;
+  const N = art.cols * art.rows;
   for (let i = 0; i < N; i++) {
-    const r = (i / a.cols) | 0, q = i - r * a.cols, X = q * cw, Y = r * ch;
-    if (!glow) { x.fillStyle = `rgb(${a.back[i * 3]},${a.back[i * 3 + 1]},${a.back[i * 3 + 2]})`; x.fillRect(X, Y, cw, ch) }
-    const g = a.glyph[i]; if (!g) continue;
-    const f = glow ? a.glowFore : a.fore;
-    x.fillStyle = `rgb(${f[i * 3]},${f[i * 3 + 1]},${f[i * 3 + 2]})`;
-    x.fillText(CHARS[g], X + cw / 2, Y + ch / 2 + ch * 0.03);
+    const r = (i / art.cols) | 0, q = i - r * art.cols, X = q * cw, Y = r * ch;
+    if (back) { x.fillStyle = `rgb(${back[i * 3]},${back[i * 3 + 1]},${back[i * 3 + 2]})`; x.fillRect(X, Y, cw, ch) }
+    const g = art.glyph[i]; if (!g) continue;
+    x.fillStyle = `rgb(${fore[i * 3]},${fore[i * 3 + 1]},${fore[i * 3 + 2]})`;
+    x.fillText(ALL[g], X + cw / 2, Y + ch / 2 + ch * 0.03);
   }
-  // when every cell lands
-  const land = new Float32Array(N), order = new Uint32Array(N);
-  const cx = a.cols / 2, cy = a.rows / 2, far = Math.hypot(cx, cy * 2);
+  return c;
+}
+
+// ------------------------------------------------------------------ the formation
+function sprite(size, rgb, core, paper) {
+  const c = document.createElement("canvas"); c.width = c.height = size; const x = c.getContext("2d");
+  const g = x.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2), [r, gr, b] = rgb;
+  if (paper) { g.addColorStop(0, `rgba(${r},${gr},${b},.9)`); g.addColorStop(0.35, `rgba(${r},${gr},${b},.35)`); g.addColorStop(1, `rgba(${r},${gr},${b},0)`) }
+  else { g.addColorStop(0, `rgba(255,250,240,${core})`); g.addColorStop(0.18, `rgba(${r},${gr},${b},.75)`); g.addColorStop(0.5, `rgba(${r},${gr},${b},.18)`); g.addColorStop(1, `rgba(${r},${gr},${b},0)`) }
+  x.fillStyle = g; x.fillRect(0, 0, size, size); return c;
+}
+function makeFilm(art, look, cw, W, H, ox, oy, opt = {}) {
+  const ch = cw * 2, cols = art.cols, rows = art.rows, N = cols * rows, paper = look === "paper";
+  const artC = renderArt(art, look, cw);
+  const done = document.createElement("canvas"); done.width = artC.width; done.height = artC.height;
+  const dctx = done.getContext("2d"); dctx.fillStyle = paper ? "#efe7d8" : "#000"; dctx.fillRect(0, 0, done.width, done.height);
+  // when every character lands
+  const build = SPEED[opt.speed || state.speed] || SPEED.normal, way = opt.way || state.way;
+  const land = new Float32Array(N), cx = cols / 2, cy = rows / 2, far = Math.hypot(cx, cy * 2);
   for (let i = 0; i < N; i++) {
-    const r = (i / a.cols) | 0, q = i - r * a.cols;
-    let d = state.way === "down" ? r / a.rows : state.way === "up" ? 1 - r / a.rows : Math.hypot(q - cx, (r - cy) * 2) / far;
-    d += 0.035 * Math.sin(q * 0.21 + r * 0.05) + 0.05 * Math.random();
-    land[i] = T_BUILD + BUILD * Math.min(1, Math.max(0, d));
-    order[i] = i;
+    const r = (i / cols) | 0, q = i - r * cols, rnd = Math.random();
+    let d;
+    if (way === "down") d = r / rows + 0.035 * Math.sin(q * 0.21 + r * 0.05) + 0.05 * rnd;
+    else if (way === "up") d = 1 - r / rows + 0.035 * Math.sin(q * 0.21 + r * 0.05) + 0.05 * rnd;
+    else if (way === "out") d = Math.hypot(q - cx, (r - cy) * 2) / far + 0.06 * rnd;
+    else if (way === "outline") d = art.edge[i] > 0.3 ? 0.42 * (0.75 * r / rows + 0.25 * rnd) : 0.45 + 0.55 * Math.pow(rnd, 0.85);
+    else if (way === "type") d = (r + q / cols) / rows;
+    else d = rnd;
+    land[i] = T_START + build * clamp01(d);
   }
-  order.sort((p, q) => land[p] - land[q]);
-  // particles: each flies to one character and arrives as it lands
-  const lit = []; for (let i = 0; i < N; i++) if (a.glyph[i] || !glow) lit.push(i);
-  const P = Math.min(lit.length, phone ? 2200 : 5200);
-  const p = { to: new Float32Array(P * 2), from: new Float32Array(P * 2), mid: new Float32Array(P * 2), arrive: new Float32Array(P),
-              fly: new Float32Array(P), drift: new Float32Array(P * 5) };
+  const order = Uint32Array.from({ length: N }, (_, i) => i).sort((a, b) => land[a] - land[b]);
+  // the sparks: each flies to one character and arrives as it lands
+  const lit = []; for (let i = 0; i < N; i++) if (art.glyph[i] || look === "true") lit.push(i);
+  const P = Math.min(lit.length, opt.particles ?? (phone ? 2200 : 5200));
+  const p = { to: new Float32Array(P * 2), from: new Float32Array(P * 2), mid: new Float32Array(P * 2), arrive: new Float32Array(P), fly: new Float32Array(P), drift: new Float32Array(P * 5) };
   for (let k = 0; k < P; k++) {
-    const i = lit[(Math.random() * lit.length) | 0], r = (i / a.cols) | 0, q = i - r * a.cols;
-    const tx = (q + 0.5) * cw, ty = (r + 0.5) * ch;
+    const i = lit[(Math.random() * lit.length) | 0], r = (i / cols) | 0, q = i - r * cols;
+    const tx = ox + (q + 0.5) * cw, ty = oy + (r + 0.5) * ch;
     p.to[k * 2] = tx; p.to[k * 2 + 1] = ty; p.arrive[k] = land[i]; p.fly[k] = FLY[0] + Math.random() * (FLY[1] - FLY[0]);
     let sx, sy, vy;
-    if (state.way === "down") { sx = Math.random() * W; sy = (-0.25 + Math.random() * 0.6) * H; vy = (0.01 + Math.random() * 0.03) * H }
-    else if (state.way === "up") { sx = Math.random() * W; sy = (0.65 + Math.random() * 0.6) * H; vy = -(0.01 + Math.random() * 0.03) * H }
-    else { const ang = Math.random() * Math.PI * 2, rad = (0.55 + Math.random() * 0.35) * Math.hypot(W, H) / 2;
-           sx = W / 2 + Math.cos(ang) * rad; sy = H / 2 + Math.sin(ang) * rad; vy = 0 }
+    if (way === "down") { sx = Math.random() * W; sy = (-0.25 + Math.random() * 0.55) * H; vy = (0.01 + Math.random() * 0.03) * H }
+    else if (way === "up") { sx = Math.random() * W; sy = (0.7 + Math.random() * 0.55) * H; vy = -(0.01 + Math.random() * 0.03) * H }
+    else if (way === "out") { const a = Math.random() * Math.PI * 2, rad = (0.55 + Math.random() * 0.4) * Math.hypot(W, H) / 2; sx = W / 2 + Math.cos(a) * rad; sy = H / 2 + Math.sin(a) * rad; vy = 0 }
+    else { sx = Math.random() * W; sy = Math.random() * H; vy = (Math.random() - 0.5) * 0.01 * H }
     p.drift.set([sx, sy, vy, Math.random() * 6.3, 0.004 * W + Math.random() * 0.012 * W], k * 5);
-    const launch = p.arrive[k] - p.fly[k], s = driftAt(p, k, launch);
+    const s = driftAt(p, k, p.arrive[k] - p.fly[k]);
     p.from[k * 2] = s[0]; p.from[k * 2 + 1] = s[1];
     const dx = tx - s[0], dy = ty - s[1], bend = (Math.random() - 0.5) * 0.6;
     p.mid[k * 2] = (s[0] + tx) / 2 - dy * bend; p.mid[k * 2 + 1] = (s[1] + ty) / 2 + dx * bend;
   }
-  // soft glowing dots, drawn once: a warm one for the swarm and trails, a white-hot one for the heads
   const ds = Math.max(8, Math.round(cw * 2.6));
-  const sprite = (r, g, b, core) => {
-    const c = document.createElement("canvas"); c.width = c.height = ds; const x = c.getContext("2d");
-    const gr = x.createRadialGradient(ds / 2, ds / 2, 0, ds / 2, ds / 2, ds / 2);
-    gr.addColorStop(0, `rgba(255,250,240,${core})`); gr.addColorStop(0.18, `rgba(${r},${g},${b},.75)`);
-    gr.addColorStop(0.5, `rgba(${r},${g},${b},.18)`); gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
-    x.fillStyle = gr; x.fillRect(0, 0, ds, ds); return c;
-  };
-  const dot = sprite(255, 168, 92, 0.7), hot = sprite(255, 214, 160, 1);
-  const done = document.createElement("canvas"); done.width = W; done.height = H;
-  const dctx = done.getContext("2d"); dctx.fillStyle = "#000"; dctx.fillRect(0, 0, W, H);
-  return { a, W, H, cw, ch, art, land, order, next: 0, p, P, dot, hot, ds, done, dctx, end: T_BUILD + BUILD + 0.4 };
+  const dot = paper ? sprite(ds, [90, 52, 30], 0, true) : sprite(ds, [255, 168, 92], 0.7);
+  const hot = paper ? sprite(ds, [150, 60, 20], 0, true) : sprite(ds, [255, 214, 160], 1);
+  return { art, look, paper, cols, rows, cw, ch, W, H, ox, oy, artC, done, dctx, land, order, next: 0, p, P, dot, hot, ds,
+           end: T_START + build + 0.4, bg: paper ? "#e9e1d1" : "#07060b" };
 }
-
 function driftAt(p, k, t) {
-  const o = k * 5, sx = p.drift[o], sy = p.drift[o + 1], vy = p.drift[o + 2], ph = p.drift[o + 3], sw = p.drift[o + 4];
-  return [sx + sw * Math.sin(t * 0.6 + ph), sy + vy * t + 0.6 * sw * Math.cos(t * 0.45 + ph)];
+  const o = k * 5, sw = p.drift[o + 4], ph = p.drift[o + 3];
+  return [p.drift[o] + sw * Math.sin(t * 0.6 + ph), p.drift[o + 1] + p.drift[o + 2] * t + 0.6 * sw * Math.cos(t * 0.45 + ph)];
 }
+function finish(f) { f.dctx.drawImage(f.artC, 0, 0); f.next = f.order.length }
 
-function frame(now) {
-  const f = film; if (!f) return;
-  const t = (now - state.t0) / 1000;
-  // characters that have landed are copied onto the finished layer for good
-  while (f.next < f.order.length && f.land[f.order[f.next]] <= t) {
-    const i = f.order[f.next++], r = (i / f.a.cols) | 0, q = i - r * f.a.cols;
-    f.dctx.drawImage(f.art, q * f.cw, r * f.ch, f.cw, f.ch, q * f.cw, r * f.ch, f.cw, f.ch);
+function drawFilm(f, x, t, fx) {
+  const { cw, ch, ox, oy, cols } = f;
+  while (f.next < f.order.length && f.land[f.order[f.next]] <= t) {      // landed characters stay for good
+    const i = f.order[f.next++], r = (i / cols) | 0, q = i - r * cols;
+    f.dctx.drawImage(f.artC, q * cw, r * ch, cw, ch, q * cw, r * ch, cw, ch);
   }
-  ctx.globalCompositeOperation = "source-over";
-  ctx.drawImage(f.done, 0, 0);
-  ctx.globalCompositeOperation = "lighter";
-  // the newest characters glow white-hot and cool to their colour
-  for (let j = f.next - 1; j >= 0; j--) {
+  x.globalCompositeOperation = "source-over"; x.globalAlpha = 1;
+  x.fillStyle = f.bg; x.fillRect(0, 0, f.W, f.H);
+  x.drawImage(f.done, ox, oy);
+  x.globalCompositeOperation = f.paper ? "multiply" : "lighter";
+  for (let j = f.next - 1; j >= 0; j--) {                                // the newest glow white-hot and cool down
     const i = f.order[j], age = t - f.land[i]; if (age > 0.35) break;
-    const k = (1 - age / 0.35) ** 2, r = (i / f.a.cols) | 0, q = i - r * f.a.cols;
-    ctx.fillStyle = `rgba(255,${170 + 60 * k | 0},${110 + 90 * k | 0},${0.5 * k})`;
-    ctx.fillRect(q * f.cw, r * f.ch, f.cw, f.ch);
+    const k = (1 - age / 0.35) ** 2, r = (i / cols) | 0, q = i - r * cols;
+    x.fillStyle = f.paper ? `rgba(235,140,70,${0.6 * k})` : `rgba(255,${170 + 60 * k | 0},${110 + 90 * k | 0},${0.5 * k})`;
+    x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
   }
-  // sparks: drifting, then flying in along a curve with a short trail
   const fade = Math.min(1, t / 0.9), p = f.p, sz = f.ds;
   for (let k = 0; k < f.P; k++) {
     const arrive = p.arrive[k]; if (t >= arrive) continue;
     const launch = arrive - p.fly[k];
     if (t < launch) {
-      const s = driftAt(p, k, t), tw = 0.22 + 0.18 * Math.sin(t * 2.3 + k);
-      ctx.globalAlpha = tw * fade; ctx.drawImage(f.dot, s[0] - sz / 3, s[1] - sz / 3, sz / 1.5, sz / 1.5);
+      const s = driftAt(p, k, t);
+      x.globalAlpha = (0.22 + 0.18 * Math.sin(t * 2.3 + k)) * fade; x.drawImage(f.dot, s[0] - sz / 3, s[1] - sz / 3, sz / 1.5, sz / 1.5);
       continue;
     }
     const u = (t - launch) / p.fly[k];
-    for (let j = 0; j < 3; j++) {
+    for (let j = 0; j < 3; j++) {                                        // a short trail behind each spark
       const v = Math.max(0, u - j * 0.035), e = v * v * v * (v * (v * 6 - 15) + 10);
       const X = (1 - e) * (1 - e) * p.from[k * 2] + 2 * e * (1 - e) * p.mid[k * 2] + e * e * p.to[k * 2];
       const Y = (1 - e) * (1 - e) * p.from[k * 2 + 1] + 2 * e * (1 - e) * p.mid[k * 2 + 1] + e * e * p.to[k * 2 + 1];
       const s = sz * (j ? 0.55 : 0.85);
-      ctx.globalAlpha = (0.3 + 0.45 * u) * (1 - j * 0.35);
-      ctx.drawImage(j ? f.dot : f.hot, X - s / 2, Y - s / 2, s, s);
+      x.globalAlpha = (0.3 + 0.45 * u) * (1 - j * 0.35);
+      x.drawImage(j ? f.dot : f.hot, X - s / 2, Y - s / 2, s, s);
     }
   }
-  ctx.globalAlpha = 1;
-  // the torch: characters under the pointer light up
-  if (pointer.on) {
-    const R = Math.max(5, 90 * (devicePixelRatio || 1) / f.cw), pc = pointer.x / f.cw, pr = pointer.y / f.ch;
-    for (let r = Math.max(0, Math.floor(pr - R / 2)); r <= Math.min(f.a.rows - 1, Math.ceil(pr + R / 2)); r++)
-      for (let q = Math.max(0, Math.floor(pc - R)); q <= Math.min(f.a.cols - 1, Math.ceil(pc + R)); q++) {
-        const d = Math.hypot((q + 0.5 - pc) / R, (r + 0.5 - pr) / (R / 2)); if (d >= 1) continue;
-        ctx.fillStyle = `rgba(255,205,150,${0.55 * (1 - d) ** 1.6})`; ctx.fillRect(q * f.cw, r * f.ch, f.cw, f.ch);
+  x.globalAlpha = 1;
+  const st = (t - f.end - 0.1) / 1.4;                                    // a soft light sweeps over the finished picture
+  if (st > 0 && st < 1 && !f.paper) {
+    const aw = cols * cw, ah = f.rows * ch, span = aw + ah, w = span * 0.03, mid = -0.12 * span + st * 1.24 * span;
+    for (let s = -3; s <= 3; s++) {
+      const c0 = mid + s * w - w / 2;
+      x.save(); x.beginPath();
+      x.moveTo(ox + c0, oy); x.lineTo(ox + c0 + w, oy); x.lineTo(ox + c0 + w - ah, oy + ah); x.lineTo(ox + c0 - ah, oy + ah); x.closePath(); x.clip();
+      x.globalCompositeOperation = "lighter"; x.globalAlpha = 0.36 * (1 - Math.abs(s) / 4) * Math.sin(Math.PI * st);
+      x.drawImage(f.done, ox, oy); x.restore();
+    }
+  }
+  if (fx) {
+    if (fx.pointer && fx.pointer.on) {                                   // the torch: characters under the pointer light up
+      const R = Math.max(5, 90 * fx.dpr / cw), pc = (fx.pointer.x - ox) / cw, pr = (fx.pointer.y - oy) / ch;
+      for (let r = Math.max(0, Math.floor(pr - R / 2)); r <= Math.min(f.rows - 1, Math.ceil(pr + R / 2)); r++)
+        for (let q = Math.max(0, Math.floor(pc - R)); q <= Math.min(cols - 1, Math.ceil(pc + R)); q++) {
+          const d = Math.hypot((q + 0.5 - pc) / R, (r + 0.5 - pr) / (R / 2)); if (d >= 1) continue;
+          x.fillStyle = f.paper ? `rgba(255,236,140,${0.75 * (1 - d) ** 1.4})` : `rgba(255,205,150,${0.55 * (1 - d) ** 1.6})`;
+          x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
+        }
+    }
+    for (const rp of fx.ripples) {                                       // a ripple of light from a click or tap
+      const age = (fx.now - rp.t) / 1000; if (age > 1.2) continue;
+      const rad = age * Math.max(f.W, f.H) * 0.55, band = Math.max(cw * 4, 22 * fx.dpr), a = 0.55 * (1 - age / 1.2);
+      const r0 = Math.max(0, Math.floor((rp.y - oy - rad - band) / ch)), r1 = Math.min(f.rows - 1, Math.ceil((rp.y - oy + rad + band) / ch));
+      for (let r = r0; r <= r1; r++) {
+        const yy = oy + (r + 0.5) * ch - rp.y;
+        for (let q = 0; q < cols; q++) {
+          const xx = ox + (q + 0.5) * cw - rp.x, d = Math.abs(Math.hypot(xx, yy) - rad); if (d > band) continue;
+          x.fillStyle = f.paper ? `rgba(240,150,80,${a * (1 - d / band)})` : `rgba(255,200,140,${a * (1 - d / band)})`;
+          x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
+        }
       }
-    const s = R * f.cw * 1.4; ctx.globalAlpha = 0.18; ctx.drawImage(f.dot, pointer.x - s / 2, pointer.y - s / 2, s, s); ctx.globalAlpha = 1;
-  }
-  // once it is all there, a few characters sparkle now and then
-  if (t > f.end) {
-    for (let s = 0; s < 6; s++) {
-      const i = (Math.random() * f.a.cols * f.a.rows) | 0, r = (i / f.a.cols) | 0, q = i - r * f.a.cols;
-      if (!f.a.glyph[i]) continue;
-      ctx.fillStyle = "rgba(255,240,215,0.22)"; ctx.fillRect(q * f.cw, r * f.ch, f.cw, f.ch);
+    }
+    if (t > f.end && !f.paper) {                                         // a few characters sparkle now and then
+      for (let s = 0; s < 6; s++) {
+        const i = (Math.random() * cols * f.rows) | 0, r = (i / cols) | 0, q = i - r * cols;
+        if (!f.art.glyph[i]) continue;
+        x.fillStyle = "rgba(255,240,215,0.22)"; x.fillRect(ox + q * cw, oy + r * ch, cw, ch);
+      }
     }
   }
-  ctx.globalCompositeOperation = "source-over";
-  if (t < f.end + 600) state.raf = requestAnimationFrame(frame);
+  x.globalCompositeOperation = "source-over";
 }
 
-// ------------------------------------------------------------------ putting it together
-const arts = {};
-function artFor(size) {
-  const key = size;
-  if (!arts[key]) arts[key] = convert(state.img, COLS[size]);
-  return arts[key];
+// ------------------------------------------------------------------ the stage
+let film = null, art = null, raf = 0, t0 = 0, token = 0, exporting = false;
+const pointer = { on: false, x: 0, y: 0 }, ripples = [];
+function geometry(a) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5), stage = $("stage");
+  const n = narrow() && document.fullscreenElement !== stage;
+  const cssW = stage.clientWidth, side = n ? 10 : 24, topH = 50, botH = 38;
+  const availW = (cssW - 2 * side) * dpr;
+  const availH = (n ? Math.max(260, innerHeight * 0.72) : stage.clientHeight - topH - botH) * dpr;
+  const cw = Math.max(2, Math.floor(Math.min(availW / a.cols, availH / (a.rows * 2))));
+  const artW = a.cols * cw, artH = a.rows * cw * 2, W = Math.round(cssW * dpr);
+  const H = n ? artH + Math.round((topH + botH) * dpr) : Math.round(stage.clientHeight * dpr);
+  const oy = Math.round(topH * dpr + Math.max(0, (H - (topH + botH) * dpr - artH) / 2));
+  return { dpr, cw, W, H, ox: Math.round((W - artW) / 2), oy, n };
 }
-
-function play(instant) {
-  cancelAnimationFrame(state.raf);
-  if (!state.img) return;
-  const a = artFor(state.size);
-  film = makeFilm(a);
-  $("m-grid").textContent = `${a.cols} × ${a.rows} characters · ${(a.cols * a.rows).toLocaleString()} in all`;
+function show(instant) {
+  if (!art) return;
+  const g = geometry(art);
+  film = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy);
+  film.dpr = g.dpr; film.img = state.img;
+  view.width = g.W; view.height = g.H;
+  view.style.height = g.n ? g.H / g.dpr + "px" : "";
+  setPeek(0); peekSticky = false;
+  $("stage").classList.toggle("paper", state.look === "paper");
+  $("m-grid").textContent = `${art.cols} × ${art.rows} characters · ${(art.cols * art.rows).toLocaleString()} in all`;
   $("m-name").textContent = state.name;
-  state.t0 = performance.now() - (instant || reduced ? (film.end + 0.5) * 1000 : 0);
-  if (instant || reduced) { film.next = 0; film.land.fill(0) }
-  state.raf = requestAnimationFrame(frame);
-  if (!reduced && matchMedia("(hover: hover)").matches) setTimeout(() => { $("hint").hidden = false }, (film.end + 0.3) * 1000);
+  cancelAnimationFrame(raf); lastDraw = 0;
+  t0 = performance.now();
+  if (instant || reduced) { finish(film); t0 -= (film.end + 2) * 1000 }
+  else if (!touch && $("stage").clientWidth >= 720) { const f = film; setTimeout(() => { if (film === f) $("hint").hidden = false }, (film.end + 0.3) * 1000) }
+  raf = requestAnimationFrame(tick);
 }
-
+// compare: your picture itself, drawn over the art
+const peek = { v: 0, target: 0 };
+let peekSticky = false, peekDownAt = 0, lastDraw = 0;
+function setPeek(v) { peek.target = v; $("peek").setAttribute("aria-pressed", v ? "true" : "false") }
+function photoFor(f) {
+  if (f.photo) return f.photo;
+  const c = document.createElement("canvas"); c.width = f.cols * f.cw; c.height = f.rows * f.ch;
+  const x = c.getContext("2d"); x.fillStyle = f.paper ? "#fff" : "#000"; x.fillRect(0, 0, c.width, c.height);
+  x.imageSmoothingQuality = "high"; x.drawImage(f.img, 0, 0, c.width, c.height);
+  return (f.photo = c);
+}
+function tick(now) {
+  if (!film || exporting) return;
+  raf = requestAnimationFrame(tick);
+  const t = (now - t0) / 1000;
+  while (ripples.length && now - ripples[0].t > 1300) ripples.shift();
+  const moving = t < film.end + 2 || pointer.on || ripples.length > 0 || peek.v > 0 || peek.target > 0;
+  if (!moving && now - lastDraw < 110) return;                         // nothing moving: a few frames a second for the glints
+  lastDraw = now;
+  drawFilm(film, ctx, t, { pointer, ripples, now, dpr: film.dpr || 1 });
+  peek.v += (peek.target - peek.v) * 0.3; if (Math.abs(peek.target - peek.v) < 0.02) peek.v = peek.target;
+  if (peek.v > 0) { ctx.globalAlpha = peek.v; ctx.drawImage(photoFor(film), film.ox, film.oy); ctx.globalAlpha = 1 }
+}
+function busy(on) { clearTimeout(busy.h); if (on) busy.h = setTimeout(() => { $("busy").hidden = false }, 120); else $("busy").hidden = true }
+async function refresh(instant) {
+  if (!state.img || !G) return;
+  const my = ++token; busy(true);
+  try {
+    const a = await makeArt();
+    if (my !== token) return;
+    art = a; await nextPaint(); if (my !== token) return;
+    show(instant);
+  } catch (e) { toast("That picture couldn't be turned into characters. Try another one."); console.error(e) }
+  finally { if (my === token) busy(false) }
+}
 function counts() {
   if (!state.img) return;
-  for (const b of $("size").querySelectorAll("button")) {
-    const cols = COLS[b.dataset.v], rows = Math.max(4, Math.round(cols * (state.img.height / state.img.width) * (AW / AH)));
-    b.querySelector("small").textContent = `${cols}×${rows}`;
-  }
+  for (const b of $("size").querySelectorAll("button")) b.querySelector("small").textContent = `${COLS[b.dataset.v]}×${rowsFor(COLS[b.dataset.v])}`;
 }
-
-function busy(on) { $("busy").hidden = !on }
-
 function useImage(img, name) {
-  state.img = img; state.name = name;
-  for (const k in arts) delete arts[k];
-  counts();
-  busy(true);
-  setTimeout(() => { try { play(false) } finally { busy(false) } }, 30);    // let the "making" label show first
+  state.img = img; state.name = name; arts.clear(); counts(); refresh(false);
+  if (narrow() && !name.startsWith("sample")) $("stage").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
 }
-
-function toast(msg) {
-  const t = $("toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 3200);
-}
-
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 3800) }
 function readFile(file) {
   if (!file) return;
-  if (!file.type.startsWith("image/")) { toast("That file isn't an image. Try a JPG, PNG, WebP or GIF."); return }
-  const url = URL.createObjectURL(file), img = new Image();
-  img.onload = () => { useImage(img, file.name.length > 34 ? file.name.slice(0, 31) + "…" : file.name); };
-  img.onerror = () => toast("That image couldn't be opened. Try saving it as a JPG or PNG first.");
-  img.src = url;
+  if (file.type && !file.type.startsWith("image/")) { toast("That file isn't a picture. Try a JPG, PNG, WebP or GIF."); return }
+  const img = new Image();
+  img.onload = () => useImage(img, file.name ? (file.name.length > 34 ? file.name.slice(0, 31) + "…" : file.name) : "pasted picture");
+  img.onerror = () => toast("That picture couldn't be opened. Try saving it as a JPG or PNG first.");
+  img.src = URL.createObjectURL(file);
 }
 
-// a sample picture, painted here so the page works before anything is dropped: a sunset over the sea
-function samplePicture() {
+// sample pictures, painted here so the page works before anything is chosen
+function sampleSunset() {                            // a sunset over the sea
   const W = 900, H = 1100, c = document.createElement("canvas"); c.width = W; c.height = H;
   const x = c.getContext("2d"), horizon = H * 0.6, sunY = H * 0.47;
   const sky = x.createLinearGradient(0, 0, 0, horizon);
@@ -546,7 +767,7 @@ function samplePicture() {
   const disc = x.createLinearGradient(0, sunY - 150, 0, sunY + 150);
   disc.addColorStop(0, "#fff3c4"); disc.addColorStop(1, "#ff9f43");
   x.fillStyle = disc; x.beginPath(); x.arc(W / 2, sunY, 150, 0, Math.PI * 2); x.fill();
-  x.fillStyle = "#c8407a"; for (let i = 0; i < 6; i++) x.fillRect(W / 2 - 160, sunY + 20 + i * 22, 320, 3 + i * 2.4);   // retro bands
+  x.fillStyle = "#c8407a"; for (let i = 0; i < 6; i++) x.fillRect(W / 2 - 160, sunY + 20 + i * 22, 320, 3 + i * 2.4);
   for (const [col, base, amp, f] of [["#3a1450", 0.54, 0.05, 150], ["#1d0b30", 0.585, 0.035, 90]]) {
     x.fillStyle = col; x.beginPath(); x.moveTo(0, horizon + 2);
     for (let X = 0; X <= W; X += 8) x.lineTo(X, H * (base - amp * Math.abs(Math.sin(X / f + base * 7))));
@@ -555,12 +776,12 @@ function samplePicture() {
   const sea = x.createLinearGradient(0, horizon, 0, H);
   sea.addColorStop(0, "#6a2668"); sea.addColorStop(1, "#0a0820");
   x.fillStyle = sea; x.fillRect(0, horizon, W, H - horizon);
-  for (let i = 0; i < 60; i++) {                                   // the sun's path on the water
+  for (let i = 0; i < 60; i++) {
     const y = horizon + 6 + i * i * 0.12, w = 300 * (1 - i / 75) + Math.random() * 70;
     x.fillStyle = `rgba(255,${200 - i * 1.2 | 0},${120 - i | 0},${0.9 - i / 70})`;
     x.fillRect(W / 2 - w / 2 + (Math.random() - 0.5) * 40, y, w, 3 + i / 10);
   }
-  x.fillStyle = "#06030c";                                         // a palm tree on the left
+  x.fillStyle = "#06030c";
   x.beginPath(); x.moveTo(120, H); x.quadraticCurveTo(150, H * 0.8, 230, H * 0.5); x.lineTo(246, H * 0.505); x.quadraticCurveTo(176, H * 0.8, 160, H); x.fill();
   for (let i = 0; i < 8; i++) {
     const a = -Math.PI + 0.2 + i * 0.42; x.beginPath(); x.moveTo(238, H * 0.5);
@@ -570,47 +791,263 @@ function samplePicture() {
   return c;
 }
 
+function sampleAurora() {                            // northern lights over a mountain lake
+  const W = 900, H = 1100, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d"), horizon = H * 0.64;
+  const sky = x.createLinearGradient(0, 0, 0, horizon);
+  sky.addColorStop(0, "#01030c"); sky.addColorStop(0.55, "#06142c"); sky.addColorStop(1, "#0b2f44");
+  x.fillStyle = sky; x.fillRect(0, 0, W, horizon);
+  for (let i = 0; i < 260; i++) { const z = Math.random() < 0.1 ? 3 : 2; x.fillStyle = `rgba(230,240,255,${0.3 + Math.random() * 0.7})`; x.fillRect(Math.random() * W, Math.random() * horizon * 0.9, z, z) }
+  x.globalCompositeOperation = "lighter";
+  for (const [k, rgb, amp] of [[0, "60,255,170", 1], [1, "80,220,255", 0.7], [2, "190,110,255", 0.5]]) {   // the curtains of light
+    for (let X = 0; X < W; X += 3) {
+      const base = H * (0.30 + 0.07 * k) + 55 * Math.sin(X / 150 + k * 2.1) + 22 * Math.sin(X / 53 + k);
+      const len = (190 + 110 * Math.sin(X / 97 + k * 3)) * amp + 60;
+      const g = x.createLinearGradient(0, base - len, 0, base);
+      g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(0.7, `rgba(${rgb},${0.10 * amp})`); g.addColorStop(1, `rgba(${rgb},${0.42 * amp})`);
+      x.fillStyle = g; x.fillRect(X, base - len, 3, len);
+    }
+  }
+  x.globalCompositeOperation = "source-over";
+  for (const [col, base, amp, seed] of [["#0a1626", 0.52, 0.11, 1], ["#03080f", 0.6, 0.07, 2]]) {     // mountains
+    x.fillStyle = col; x.beginPath(); x.moveTo(0, horizon + 2);
+    for (let X = 0; X <= W; X += 12) x.lineTo(X, H * (base - amp * (0.5 + 0.5 * Math.sin(X / 110 + seed * 3)) - 0.03 * Math.abs(Math.sin(X / 37 + seed))));
+    x.lineTo(W, horizon + 2); x.closePath(); x.fill();
+  }
+  x.save(); x.translate(0, horizon * 2); x.scale(1, -1); x.globalAlpha = 0.45;          // the lake mirrors it all
+  x.drawImage(c, 0, 0, W, horizon, 0, 0, W, horizon); x.restore();
+  const water = x.createLinearGradient(0, horizon, 0, H);
+  water.addColorStop(0, "rgba(4,16,30,0.3)"); water.addColorStop(1, "rgba(1,4,10,0.85)");
+  x.fillStyle = water; x.fillRect(0, horizon, W, H - horizon);
+  for (let i = 0; i < 46; i++) { x.fillStyle = "rgba(120,255,200,0.07)"; x.fillRect(Math.random() * W * 0.85, horizon + 6 + Math.random() * (H - horizon), 60 + Math.random() * 220, 2) }
+  x.fillStyle = "#020509"; x.fillRect(0, horizon - 3, W, 7);
+  return c;
+}
+function samplePlanet() {                            // a ringed planet and its moon
+  const W = 900, H = 1100, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  x.fillStyle = "#04020a"; x.fillRect(0, 0, W, H);
+  for (const [px, py, r, col] of [[200, 260, 420, "rgba(110,40,160,0.35)"], [720, 820, 460, "rgba(30,90,170,0.30)"], [620, 280, 300, "rgba(200,60,120,0.18)"]]) {
+    const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  }
+  for (let i = 0; i < 320; i++) { const z = Math.random() < 0.08 ? 3 : 1.6; x.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.8})`; x.fillRect(Math.random() * W, Math.random() * H, z, z) }
+  const cx = W * 0.5, cy = H * 0.46, R = 220, tilt = -0.32;
+  const ring = front => {
+    x.save(); x.translate(cx, cy); x.rotate(tilt);
+    x.beginPath(); x.rect(-W, front ? 0 : -H, 2 * W, H); x.clip();
+    for (let i = 0; i < 26; i++) {
+      const rr = R * (1.35 + i * 0.03), a = [0.55, 0.35, 0.6, 0.25][i % 4] * (1 - i / 34);
+      x.beginPath(); x.ellipse(0, 0, rr, rr * 0.24, 0, 0, Math.PI * 2);
+      x.strokeStyle = `rgba(${235 - i * 2},${200 - i * 3},${150 - i * 2},${a})`; x.lineWidth = 6; x.stroke();
+    }
+    x.restore();
+  };
+  ring(false);
+  const body = x.createRadialGradient(cx - R * 0.45, cy - R * 0.5, R * 0.1, cx, cy, R * 1.05);
+  body.addColorStop(0, "#ffe2b0"); body.addColorStop(0.45, "#e8955a"); body.addColorStop(0.8, "#7a3346"); body.addColorStop(1, "#1a0a1c");
+  x.fillStyle = body; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill();
+  x.save(); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.clip(); x.translate(cx, cy); x.rotate(tilt);      // its cloud bands
+  for (let i = -10; i <= 10; i++) { x.fillStyle = `rgba(${i % 2 ? "90,30,40" : "255,220,170"},${0.12 + 0.06 * Math.sin(i * 1.7)})`; x.fillRect(-R, i * R * 0.1, 2 * R, R * (0.04 + 0.03 * Math.abs(Math.sin(i)))) }
+  x.restore();
+  ring(true);
+  const mg = x.createRadialGradient(cx + 300, cy + 330, 4, cx + 310, cy + 340, 46);
+  mg.addColorStop(0, "#e8e4f0"); mg.addColorStop(1, "#3a3550");
+  x.fillStyle = mg; x.beginPath(); x.arc(cx + 310, cy + 340, 44, 0, Math.PI * 2); x.fill();
+  return c;
+}
+const SAMPLES = [["sunset", sampleSunset], ["aurora", sampleAurora], ["planet", samplePlanet]];
+let sampleAt = 0;
+
+// ------------------------------------------------------------------ saving files
+const inClaude = typeof window.claude === "object" && window.claude && typeof window.claude.use === "function";
+const downloads = inClaude ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+downloads.then(ns => { if (inClaude && !ns) { $("save").hidden = true; $("save-note").hidden = false } });
+const SAVE_ERRORS = {
+  declined: "Not saved.", too_large: "That file is too big to save here. Try Medium or Big letters.",
+  rate_limited: "A save is already waiting for your answer.", rejected_extension: "This kind of file can't be saved here.",
+  extension_not_enabled: "This kind of file can't be saved here.", bad_request: "The file couldn't be prepared. Try again.",
+  transform_error: "The file couldn't be prepared. Try again.",
+};
+async function saveFile(blob, filename) {
+  const ns = await downloads;
+  if (ns) {
+    try { const r = await ns.save({ filename, data: blob }); if (r && r.status === "saved") toast(`Saved ${filename}`) }
+    catch (e) { toast(SAVE_ERRORS[e && e.code] || "Saving isn't available in this view.") }
+    return;
+  }
+  if (inClaude) { toast("Saving isn't available in this view."); return }
+  const a = document.createElement("a"), url = URL.createObjectURL(blob);    // an ordinary web page: a normal download
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000); toast(`Downloading ${filename}`);
+}
+const baseName = () => (state.name.replace(/\.[a-z0-9]+$/i, "").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "picture").slice(0, 40) + `-ascii-${state.size}`;
+function asText(a) {
+  let s = "";
+  for (let r = 0; r < a.rows; r++) { let line = ""; for (let q = 0; q < a.cols; q++) line += ALL[a.glyph[r * a.cols + q]]; s += line.replace(/\s+$/, "") + "\n" }
+  return s;
+}
+async function saveImage() {
+  if (!art || exporting) return;
+  let cw = Math.max(6, Math.min(40, Math.round(2400 / art.cols)));
+  while (cw > 3 && art.cols * cw * art.rows * cw * 2 > 15e6) cw--;           // phones cap a picture's size
+  busy(true); await nextPaint();
+  const c = renderArt(art, state.look, cw);
+  c.toBlob(b => { busy(false); if (b) saveFile(b, baseName() + ".png"); else toast("The picture couldn't be made. Try Medium or Big letters.") }, "image/png");
+}
+
+// the video: every frame drawn in turn and encoded as H.264 MP4 (or the best this browser can make)
+function loadMuxer() {
+  if (window.Mp4Muxer) return Promise.resolve(window.Mp4Muxer);
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = MUXER; s.onload = () => window.Mp4Muxer ? res(window.Mp4Muxer) : rej(new Error("muxer")); s.onerror = () => rej(new Error("muxer")); document.head.appendChild(s) });
+}
+async function pickEncoder(W, H, bitrate) {
+  if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") return null;
+  for (const [kind, codec] of [["avc", "avc1.640028"], ["avc", "avc1.4d0028"], ["avc", "avc1.42e028"], ["vp9", "vp09.00.40.08"]]) {
+    const config = { codec, width: W, height: H, bitrate, framerate: FPS, ...(kind === "avc" ? { avc: { format: "avc" } } : {}) };
+    try { if ((await VideoEncoder.isConfigSupported(config)).supported) return { kind, config } } catch (e) {}
+  }
+  return null;
+}
+let cancelExport = false;
+function progress(v) { $("export-bar").style.width = Math.round(v * 100) + "%"; $("export-text").textContent = `MAKING YOUR VIDEO · ${Math.round(v * 100)}%` }
+function videoGeometry(a) {
+  // about 1080 pixels across (or tall, for a wide picture), with every character a whole number of pixels;
+  // sides a multiple of 16 and within what phones' H.264 encoders take (level 4: 8,160 blocks of 16 x 16)
+  const m = 32, portrait = a.rows * 2 >= a.cols, r16 = v => Math.ceil(v / 16) * 16;
+  const size = c => [r16(a.cols * c + 2 * m), r16(a.rows * 2 * c + 2 * m)];
+  let cw = Math.max(2, Math.round((1080 - 2 * m) / (portrait ? a.cols : a.rows * 2)));
+  for (;;) { const [W, H] = size(cw); if (cw <= 2 || (W <= 1920 && H <= 1920 && (W / 16) * (H / 16) <= 8160)) break; cw-- }
+  const [W, H] = size(cw);
+  return { W, H, cw, ox: Math.round((W - a.cols * cw) / 2), oy: Math.round((H - a.rows * 2 * cw) / 2) };
+}
+function lockUI(on) { for (const id of ["file", "save-video", "save-image", "save-text", "copy", "sample", "replay", "peek"]) $(id).disabled = on }
+async function saveVideo() {
+  if (!art || exporting) return;
+  exporting = true; cancelExport = false; cancelAnimationFrame(raf); lockUI(true); setPeek(0); peekSticky = false;
+  $("export").hidden = false; progress(0);
+  try {
+    const g = videoGeometry(art), canvas = document.createElement("canvas"); canvas.width = g.W; canvas.height = g.H;
+    const x = canvas.getContext("2d");
+    const f = makeFilm(art, state.look, g.cw, g.W, g.H, g.ox, g.oy, { particles: phone ? 3200 : 6000 });
+    const frames = Math.ceil((f.end + HOLD) * FPS);
+    let blob = null, ext = "mp4";
+    const enc = await pickEncoder(g.W, g.H, Math.round(Math.min(20e6, Math.max(8e6, 1.2e8 / g.cw))));
+    const Mux = enc ? await loadMuxer().catch(() => null) : null;
+    if (enc && Mux) {
+      const muxer = new Mux.Muxer({ target: new Mux.ArrayBufferTarget(), video: { codec: enc.kind, width: g.W, height: g.H, frameRate: FPS }, fastStart: "in-memory", firstTimestampBehavior: "offset" });
+      let failed = null;
+      const encoder = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => { failed = e } });
+      encoder.configure(enc.config);
+      for (let i = 0; i < frames && !cancelExport && !failed; i++) {
+        drawFilm(f, x, i / FPS, null);
+        const vf = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+        encoder.encode(vf, { keyFrame: i % (FPS * 2) === 0 }); vf.close();
+        while (encoder.encodeQueueSize > 4) await sleep(2);
+        if (i % 4 === 0) { progress(i / frames); await sleep(0) }
+      }
+      if (!cancelExport && !failed) { await encoder.flush(); muxer.finalize(); blob = new Blob([muxer.target.buffer], { type: "video/mp4" }) }
+      try { encoder.close() } catch (e) {}
+      if (failed) throw failed;
+    } else {                                                             // no encoder here: record it as it plays
+      const mime = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+      if (!mime || !canvas.captureStream) throw new Error("This browser can't make videos.");
+      ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+      const rec = new MediaRecorder(canvas.captureStream(FPS), { mimeType: mime, videoBitsPerSecond: 10e6 }), chunks = [];
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data) };
+      const stopped = new Promise(r => { rec.onstop = r });
+      rec.start(250); const start = performance.now(), total = frames / FPS;
+      for (;;) { const t = (performance.now() - start) / 1000; if (t > total || cancelExport) break; drawFilm(f, x, t, null); progress(t / total); await new Promise(r => requestAnimationFrame(r)) }
+      rec.stop(); await stopped;
+      blob = new Blob(chunks, { type: mime.split(";")[0] });
+    }
+    if (!cancelExport && blob) {
+      progress(1); await saveFile(blob, `${baseName()}.${ext}`);
+      if (ext !== "mp4") toast("This browser can only make WebM videos, so the video was saved as .webm.");
+    }
+  } catch (e) { console.error(e); toast(e && e.message === "This browser can't make videos." ? e.message : "The video couldn't be made in this browser.") }
+  finally { exporting = false; lockUI(false); $("export").hidden = true; t0 = performance.now() - (film ? (film.end + 2) * 1000 : 0); if (film) { finish(film); raf = requestAnimationFrame(tick) } }
+}
+
 // ------------------------------------------------------------------ controls
+function setPressed(id, v) { for (const b of $(id).querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.v === v ? "true" : "false") }
 function seg(id, key, after) {
+  setPressed(id, state[key]);
   for (const b of $(id).querySelectorAll("button")) b.addEventListener("click", () => {
-    for (const o of $(id).querySelectorAll("button")) o.setAttribute("aria-pressed", o === b ? "true" : "false");
-    state[key] = b.dataset.v; after();
+    if (exporting || state[key] === b.dataset.v) return;
+    state[key] = b.dataset.v; setPressed(id, state[key]); saveSettings(); after();
   });
 }
-seg("size", "size", () => { busy(true); setTimeout(() => { try { play(false) } finally { busy(false) } }, 30) });
-seg("way", "way", () => play(false));
-seg("look", "look", () => play(true));
-$("replay").addEventListener("click", () => play(false));
-$("sample").addEventListener("click", () => useImage(samplePicture(), "sample image"));
-$("file").addEventListener("change", e => readFile(e.target.files[0]));
-$("drop").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click() } });
+const wordsBox = $("words");
+const showWords = () => { wordsBox.hidden = state.chars !== "words" };
+seg("size", "size", () => refresh(false));
+seg("chars", "chars", () => { showWords(); refresh(false); if (state.chars === "words" && !touch) wordsBox.focus() });
+seg("look", "look", () => refresh(true));
+seg("way", "way", () => show(false));
+seg("speed", "speed", () => show(false));
+showWords(); wordsBox.value = state.words || "";
+let wt; wordsBox.addEventListener("input", () => { clearTimeout(wt); wt = setTimeout(() => { state.words = wordsBox.value; saveSettings(); refresh(true) }, 350) });
+for (const id of ["bright", "contrast"]) {
+  const el = $(id); el.value = state[id]; $(id + "-v").textContent = state[id];
+  let h; el.addEventListener("input", () => { $(id + "-v").textContent = el.value; clearTimeout(h); h = setTimeout(() => { state[id] = +el.value; saveSettings(); refresh(true) }, 160) });
+}
+$("reset").addEventListener("click", () => { for (const id of ["bright", "contrast"]) { state[id] = 0; $(id).value = 0; $(id + "-v").textContent = 0 } saveSettings(); refresh(true) });
+$("replay").addEventListener("click", () => show(false));
+$("sample").addEventListener("click", () => { sampleAt = (sampleAt + 1) % SAMPLES.length; const [n, make] = SAMPLES[sampleAt]; useImage(make(), "sample: " + n) });
+const peekBtn = $("peek");                           // compare: a tap shows your picture until the next tap; holding shows it while held
+peekBtn.addEventListener("pointerdown", e => { e.preventDefault(); peekDownAt = performance.now(); if (peekSticky) { peekSticky = false; setPeek(0) } else setPeek(1) });
+peekBtn.addEventListener("pointerup", () => { if (peek.target && performance.now() - peekDownAt < 300) peekSticky = true; else if (!peekSticky) setPeek(0) });
+for (const ev of ["pointercancel", "pointerleave"]) peekBtn.addEventListener(ev, () => { if (!peekSticky) setPeek(0) });
+peekBtn.addEventListener("contextmenu", e => e.preventDefault());
+peekBtn.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); peekSticky = !peek.target; setPeek(peek.target ? 0 : 1) } });
+const stageEl = $("stage"), fullBtn = $("full");
+let fsAt = 0;
+if (document.fullscreenEnabled && stageEl.requestFullscreen) fullBtn.hidden = false;
+const toggleFull = () => {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else stageEl.requestFullscreen().catch(() => toast("Full screen isn't available here."));
+};
+fullBtn.addEventListener("click", toggleFull);
+document.addEventListener("fullscreenchange", () => {
+  fsAt = performance.now();
+  const on = document.fullscreenElement === stageEl;
+  fullBtn.textContent = on ? "✕ Exit full screen" : "⤢ Full screen";
+  setTimeout(() => { if (art && !exporting) show(!on) }, 150);      // full screen plays the formation again, big
+});
+$("file").addEventListener("change", e => { readFile(e.target.files[0]); e.target.value = "" });
+$("save-video").addEventListener("click", saveVideo);
+$("save-image").addEventListener("click", saveImage);
+$("save-text").addEventListener("click", () => { if (art) saveFile(new Blob([asText(art)], { type: "text/plain" }), baseName() + ".txt") });
+$("export-cancel").addEventListener("click", () => { cancelExport = true });
 $("copy").addEventListener("click", () => {
-  if (!state.img) return;
-  const a = artFor(state.size); let s = "";
-  for (let r = 0; r < a.rows; r++) { let line = ""; for (let q = 0; q < a.cols; q++) line += CHARS[a.glyph[r * a.cols + q]]; s += line.replace(/\s+$/, "") + "\n" }
-  navigator.clipboard.writeText(s).then(() => toast(`Copied ${a.cols} × ${a.rows} characters. Paste them into any text editor with a monospace font.`),
-    () => toast("Your browser didn't allow copying here."));
+  if (!art) return;
+  navigator.clipboard.writeText(asText(art)).then(() => toast(`Copied ${art.cols} × ${art.rows} characters. Paste them into a text editor with a monospace font.`),
+    () => toast("Your browser didn't allow copying here. Try Save text instead."));
 });
-// drag and drop anywhere on the page
+if (touch) { $("pick-title").textContent = "Choose a photo"; $("pick-sub").textContent = "from your gallery, or take one with the camera"; $("pick-cta").hidden = false; $("pick-cta").textContent = "Open gallery" }
+// drag and drop anywhere, paste, the torch and ripples
 let depth = 0;
-addEventListener("dragenter", e => { if ([...e.dataTransfer.types].includes("Files")) { depth++; $("overlay").hidden = false; $("drop").classList.add("over") } });
-addEventListener("dragleave", () => { if (--depth <= 0) { depth = 0; $("overlay").hidden = true; $("drop").classList.remove("over") } });
-addEventListener("dragover", e => e.preventDefault());
-addEventListener("drop", e => { e.preventDefault(); depth = 0; $("overlay").hidden = true; $("drop").classList.remove("over"); readFile(e.dataTransfer.files[0]) });
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes("Files");
+addEventListener("dragenter", e => { if (hasFiles(e)) { depth++; $("overlay").hidden = false; $("pick").classList.add("over") } });
+addEventListener("dragleave", () => { if (--depth <= 0) { depth = 0; $("overlay").hidden = true; $("pick").classList.remove("over") } });
+addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault() });
+addEventListener("drop", e => { if (!hasFiles(e)) return; e.preventDefault(); depth = 0; $("overlay").hidden = true; $("pick").classList.remove("over"); readFile(e.dataTransfer.files[0]) });
 addEventListener("paste", e => { const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith("image/")); if (f) readFile(f) });
-view.addEventListener("pointermove", e => {
-  if (e.pointerType === "touch") return;
-  const b = view.getBoundingClientRect();
-  pointer.x = (e.clientX - b.left) * view.width / b.width; pointer.y = (e.clientY - b.top) * view.height / b.height; pointer.on = true;
-  $("hint").style.opacity = 0;
+addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || document.activeElement?.tagName === "INPUT" || exporting) return;
+  if (e.key === "r" || e.key === "R") show(false);
+  if ((e.key === "f" || e.key === "F") && !fullBtn.hidden) toggleFull();
 });
-view.addEventListener("pointerleave", () => (pointer.on = false));
-let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (state.img) play(true) }, 250) });
+const toCanvas = e => { const b = view.getBoundingClientRect(); return [(e.clientX - b.left) * view.width / b.width, (e.clientY - b.top) * view.height / b.height] };
+view.addEventListener("pointermove", e => { if (e.pointerType !== "mouse") return; [pointer.x, pointer.y] = toCanvas(e); pointer.on = true; $("hint").style.opacity = 0 });
+view.addEventListener("pointerleave", () => { pointer.on = false });
+view.addEventListener("pointerdown", e => { const [x, y] = toCanvas(e); ripples.push({ x, y, t: performance.now() }); if (ripples.length > 5) ripples.shift() });
+let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (art && !exporting && performance.now() - fsAt > 900) show(true) }, 250) });
 
 // ------------------------------------------------------------------ start
-(document.fonts ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]) : Promise.resolve()).then(() => {
-  buildAtlas();
-  useImage(samplePicture(), "sample image");
+const fontReady = document.fonts ? Promise.race([document.fonts.load(`800 16px "JetBrains Mono"`).then(() => document.fonts.ready), sleep(2500)]) : Promise.resolve();
+fontReady.catch(() => {}).then(() => {
+  buildGlyphs(); startWorker();
+  useImage(sampleSunset(), "sample: sunset");
 });
 })();
 </script>
