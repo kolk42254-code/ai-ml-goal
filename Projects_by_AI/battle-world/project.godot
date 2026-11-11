@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Battle World"
 config/description="Third-person battle royale in a modern city. Offline, against computer fighters."
-config/version="0.1.0"
+config/version="0.1.1"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 boot_splash/bg_color=Color(0.027, 0.035, 0.055, 1)
@@ -44,3 +44,14 @@ renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/use_debanding=true
+
+[shader_globals]
+
+viewer_pos={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+tree_lod={
+"type": "float",
+"value": 48.0
+}

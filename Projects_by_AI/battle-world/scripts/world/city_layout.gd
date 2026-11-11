@@ -66,6 +66,18 @@ const CONTAINER_COLORS: Array[Color] = [
 	Color(0.80, 0.44, 0.09), Color(0.74, 0.74, 0.72), Color(0.18, 0.44, 0.50),
 	Color(0.70, 0.60, 0.13), Color(0.36, 0.36, 0.38),
 ]
+## The five kinds of trees and their crown radius at scale 1 (metres).
+## The radius is used to keep trees from growing into each other.
+const TREE_RADIUS := {"tree_cherry": 5.5, "tree_spruce": 5.0, "tree_maple": 7.2, "tree_oak_bare": 10.0, "tree_oak": 12.5}
+## Which kinds line the streets of each kind of block, and how big they are there
+## (smallest and largest scale). Street trees are much smaller than park trees.
+const STREET_TREES := {
+	Kind.DOWNTOWN: ["tree_maple", "tree_cherry"],
+	Kind.COMMERCIAL: ["tree_maple", "tree_cherry", "tree_spruce"],
+	Kind.RESIDENTIAL: ["tree_cherry", "tree_maple", "tree_spruce"],
+}
+const STREET_SCALE := {"tree_maple": Vector2(0.40, 0.52), "tree_cherry": Vector2(0.50, 0.64), "tree_spruce": Vector2(0.40, 0.52)}
+
 const CAR_COLORS: Array[Color] = [
 	Color(0.90, 0.90, 0.90), Color(0.06, 0.06, 0.07), Color(0.55, 0.57, 0.60),
 	Color(0.28, 0.29, 0.31), Color(0.55, 0.06, 0.06), Color(0.07, 0.17, 0.42),
@@ -359,7 +371,7 @@ func _pocket_plaza(p: Rect2, r: RandomNumberGenerator, block: int) -> void:
 	for i in 4:
 		var corner := Vector2(p.position.x + (2.5 if i % 2 == 0 else p.size.x - 2.5),
 			p.position.y + (2.5 if i < 2 else p.size.y - 2.5))
-		_prop("tree_a", Vector3(corner.x, CURB_H, corner.y), r.randf() * TAU, block, _leaf_tint(r), r.randf_range(0.85, 1.1))
+		_tree("tree_cherry", Vector3(corner.x, CURB_H, corner.y), block, r, Vector2(0.42, 0.52))
 	_prop("planter", Vector3(c.x, CURB_H, c.y), 0.0, block)
 	_prop("bench", Vector3(c.x, CURB_H, c.y + 2.6), 0.0, block)
 	_prop("bench", Vector3(c.x, CURB_H, c.y - 2.6), PI, block)
@@ -397,9 +409,17 @@ func _fill_residential(b: Dictionary, r: RandomNumberGenerator) -> void:
 	# Courtyard
 	var yard := lot.grow(-(depth + 3.0))
 	if yard.size.x > 6.0 and yard.size.y > 6.0:
-		for i in r.randi_range(3, 6):
+		var yard_kinds: Array[String] = ["tree_cherry", "tree_maple", "tree_spruce"]
+		var planted: Array[Vector2] = []
+		for i in 12:
 			var p := Vector2(r.randf_range(yard.position.x, yard.end.x), r.randf_range(yard.position.y, yard.end.y))
-			_prop("tree_a", Vector3(p.x, CURB_H, p.y), r.randf() * TAU, b.id, _leaf_tint(r), r.randf_range(0.8, 1.05))
+			var free := true
+			for q in planted:
+				if q.distance_to(p) < 6.0:
+					free = false
+			if free and planted.size() < 4:
+				planted.append(p)
+				_tree(yard_kinds[r.randi() % yard_kinds.size()], Vector3(p.x, CURB_H, p.y), b.id, r, Vector2(0.4, 0.55))
 		var c := yard.get_center()
 		_prop("bench", Vector3(c.x - 3.0, CURB_H, c.y), PI * 0.5, b.id)
 		_prop("planter", Vector3(c.x + 2.0, CURB_H, c.y), 0.0, b.id)
@@ -502,8 +522,13 @@ func _gantry_crane(center: Vector3, depth: float, block: int, color: Color) -> v
 	_box(center + Vector3(0.0, h + 4.9, -depth * 0.3), Vector3(0.5, 0.4, 0.5), Color(1.0, 0.12, 0.08), block, false, 0.4, 0.0, 4.0)
 
 
+## A slightly different tone for every tree, so a row of them does not look copied.
 func _leaf_tint(r: RandomNumberGenerator) -> Color:
-	return Color(r.randf_range(0.82, 1.1), r.randf_range(0.88, 1.12), r.randf_range(0.75, 1.0))
+	return Color(r.randf_range(0.92, 1.05), r.randf_range(0.93, 1.05), r.randf_range(0.90, 1.04))
+
+
+func _tree(kind: String, pos: Vector3, block: int, r: RandomNumberGenerator, size: Vector2) -> void:
+	_prop(kind, pos, r.randf() * TAU, block, _leaf_tint(r), r.randf_range(size.x, size.y))
 
 
 func _fill_park(b: Dictionary, r: RandomNumberGenerator) -> void:
@@ -517,23 +542,49 @@ func _fill_park(b: Dictionary, r: RandomNumberGenerator) -> void:
 	_prop("pond", Vector3(pond.x, CURB_H, pond.y), 0.0, b.id, Color.WHITE, park.pond_r)
 	var pav := c + Vector2(-rect.size.x * 0.27, -rect.size.y * 0.04)
 	_prop("pavilion", Vector3(pav.x, CURB_H, pav.y), 0.0, b.id)
-	# Trees: try many random spots, keep the ones on grass and not too close together.
-	var placed: Array[Vector2] = []
-	for i in 420:
-		var p := Vector2(r.randf_range(rect.position.x + 5.0, rect.end.x - 5.0),
-			r.randf_range(rect.position.y + 5.0, rect.end.y - 5.0))
-		if park_path(park, p) > 0.02 or p.distance_to(pond) < park.pond_r + 2.5 or p.distance_to(pav) < 6.5:
-			continue
-		var ok := true
-		for q in placed:
-			if q.distance_to(p) < 5.2:
-				ok = false
-				break
-		if not ok:
-			continue
-		placed.append(p)
-		var kind := "tree_a" if r.randf() < 0.7 else "tree_b"
-		_prop(kind, Vector3(p.x, CURB_H, p.y), r.randf() * TAU, b.id, _leaf_tint(r), r.randf_range(0.85, 1.25))
+	# Trees. The biggest kinds are placed first because they need the most room.
+	# Each entry: kind, how many, smallest and largest scale.
+	var plan := [
+		["tree_oak", 2, Vector2(0.72, 0.84)],
+		["tree_oak_bare", 2, Vector2(0.68, 0.82)],
+		["tree_maple", 8, Vector2(0.55, 0.8)],
+		["tree_cherry", 13, Vector2(0.62, 0.88)],
+		["tree_spruce", 13, Vector2(0.55, 0.92)],
+	]
+	var grove := c + Vector2(-rect.size.x * 0.36, rect.size.y * 0.22)       # where most spruces stand
+	var placed: Array = []                                                  # [position, crown radius]
+	for entry: Array in plan:
+		var kind: String = entry[0]
+		var size: Vector2 = entry[2]
+		var made := 0
+		var tries := 0
+		while made < int(entry[1]) and tries < 600:
+			tries += 1
+			var scale := r.randf_range(size.x, size.y)
+			var crown: float = TREE_RADIUS[kind] * scale
+			var p := Vector2(r.randf_range(rect.position.x + 6.0, rect.end.x - 6.0),
+				r.randf_range(rect.position.y + 6.0, rect.end.y - 6.0))
+			if kind == "tree_cherry" and r.randf() < 0.6:
+				# Most cherry trees stand around the pond.
+				var a := r.randf() * TAU
+				p = pond + Vector2(cos(a), sin(a)) * (float(park.pond_r) + r.randf_range(3.5, 9.0))
+			elif kind == "tree_spruce" and r.randf() < 0.7:
+				p = grove + Vector2(r.randfn(0.0, 9.0), r.randfn(0.0, 7.0))
+			if not rect.grow(-5.0).has_point(p) or park_path(park, p) > 0.02:
+				continue
+			if p.distance_to(pond) < float(park.pond_r) + 2.5 or p.distance_to(pav) < 7.0:
+				continue
+			var free := true
+			for other: Array in placed:
+				# Crowns may touch and overlap a little, but trunks stay well apart.
+				if (other[0] as Vector2).distance_to(p) < (crown + float(other[1])) * 0.6:
+					free = false
+					break
+			if not free:
+				continue
+			placed.append([p, crown])
+			_prop(kind, Vector3(p.x, CURB_H, p.y), r.randf() * TAU, b.id, _leaf_tint(r), scale)
+			made += 1
 	for i in 46:
 		var p := Vector2(r.randf_range(rect.position.x + 5.0, rect.end.x - 5.0),
 			r.randf_range(rect.position.y + 5.0, rect.end.y - 5.0))
@@ -614,8 +665,8 @@ func _fill_plaza(b: Dictionary, r: RandomNumberGenerator) -> void:
 		for sz: float in [-1.0, 1.0]:
 			var corner := c + Vector2(sx * (rect.size.x * 0.5 - 8.0), sz * (rect.size.y * 0.5 - 8.0))
 			_prop("planter", Vector3(corner.x, CURB_H, corner.y), 0.0, b.id)
-			_prop("tree_a", Vector3(corner.x + sx * 3.0, CURB_H, corner.y), r.randf() * TAU, b.id, _leaf_tint(r))
-			_prop("tree_a", Vector3(corner.x, CURB_H, corner.y + sz * 3.0), r.randf() * TAU, b.id, _leaf_tint(r))
+			_tree("tree_cherry", Vector3(corner.x + sx * 3.2, CURB_H, corner.y), b.id, r, Vector2(0.5, 0.6))
+			_tree("tree_cherry", Vector3(corner.x, CURB_H, corner.y + sz * 3.2), b.id, r, Vector2(0.5, 0.6))
 			_prop("bench", Vector3(corner.x - sx * 2.4, CURB_H, corner.y), PI * 0.5 * sx, b.id)
 	# A small monument in front of the entrance.
 	var m := Vector3(c.x, CURB_H, rect.end.y - 9.0)
@@ -667,6 +718,11 @@ func _furnish_edges(b: Dictionary, r: RandomNumberGenerator, trees: bool) -> voi
 	var rect: Rect2 = b.rect
 	var corners: Array[Vector2] = [rect.position, Vector2(rect.end.x, rect.position.y), rect.end,
 		Vector2(rect.position.x, rect.end.y)]
+	# One kind of tree per block, like real streets that were planted in one go.
+	var street_tree := ""
+	if trees and STREET_TREES.has(b.kind):
+		var options: Array = STREET_TREES[b.kind]
+		street_tree = options[(int(b.ix) * 3 + int(b.iz) * 5) % options.size()]
 	for e in 4:
 		var a := corners[e]
 		var c := corners[(e + 1) % 4]
@@ -679,11 +735,11 @@ func _furnish_edges(b: Dictionary, r: RandomNumberGenerator, trees: bool) -> voi
 			var t := (float(i) + 0.5) / float(count)
 			var p := a + dir * (length * t) + inward * 0.75
 			_prop("lamp", Vector3(p.x, CURB_H, p.y), lamp_yaw, b.id)
-			if trees and b.kind != Kind.PLAZA:
+			if street_tree != "":
 				for side: float in [-0.25, 0.25]:
 					var tp := a + dir * (length * (t + side / float(count))) + inward * 1.25
 					if r.randf() < 0.8:
-						_prop("tree_a", Vector3(tp.x, CURB_H, tp.y), r.randf() * TAU, b.id, _leaf_tint(r), r.randf_range(0.7, 0.95))
+						_tree(street_tree, Vector3(tp.x, CURB_H, tp.y), b.id, r, STREET_SCALE[street_tree])
 		if r.randf() < 0.55:
 			var p := a + dir * r.randf_range(8.0, length - 8.0) + inward * 0.6
 			_prop("hydrant", Vector3(p.x, CURB_H, p.y), 0.0, b.id)

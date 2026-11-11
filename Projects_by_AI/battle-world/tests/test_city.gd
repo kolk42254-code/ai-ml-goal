@@ -93,6 +93,30 @@ func _init() -> void:
 	_check("no prop is inside a building", buried == 0, "%d of %d" % [buried, total])
 	_check("no prop is outside the island", outside == 0, "%d of %d" % [outside, total])
 
+	# Trees: all five kinds are planted, and the big park trees do not stand trunk to trunk.
+	var kinds_found := 0
+	var tree_count := 0
+	for kind: String in CityLayout.TREE_RADIUS:
+		if city.props.has(kind) and city.props[kind].size() > 0:
+			kinds_found += 1
+			tree_count += city.props[kind].size()
+	_check("all five kinds of trees are planted", kinds_found == 5, "%d kinds, %d trees" % [kinds_found, tree_count])
+	var park_rect: Rect2 = city.parks[0].rect
+	var park_trees: Array = []
+	for kind: String in CityLayout.TREE_RADIUS:
+		for item: Dictionary in city.props.get(kind, []):
+			var at := Vector2(item.pos.x, item.pos.z)
+			if park_rect.has_point(at):
+				park_trees.append([at, float(CityLayout.TREE_RADIUS[kind]) * float(item.scale)])
+	var crowded := 0
+	for i in park_trees.size():
+		for j in range(i + 1, park_trees.size()):
+			var gap: float = (park_trees[i][0] as Vector2).distance_to(park_trees[j][0])
+			if gap < (float(park_trees[i][1]) + float(park_trees[j][1])) * 0.6 - 0.01:
+				crowded += 1
+	_check("park trees keep their distance", crowded == 0 and park_trees.size() > 25,
+		"%d trees in the park, %d too close" % [park_trees.size(), crowded])
+
 	# Start places must be free.
 	var blocked := 0
 	for s in city.spawn_points:

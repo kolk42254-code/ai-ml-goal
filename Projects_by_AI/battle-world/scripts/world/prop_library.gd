@@ -1,6 +1,6 @@
 extends RefCounted
-## Builds the small city objects (lamps, trees, cars ...) from code, so the game
-## needs no model files for them. Every prop stands on y = 0 and its front is -Z.
+## Builds the small city objects (lamps, benches, cars ...) from code, so the game
+## needs no model files for them. Trees are not made here: see tree_library.gd. Every prop stands on y = 0 and its front is -Z.
 
 const MeshBuilder := preload("res://scripts/util/mesh_builder.gd")
 
@@ -31,8 +31,6 @@ static func colliders(name: String) -> Array:
 			return [{"shape": "cylinder", "radius": 0.17, "height": 3.0, "offset": Vector3(0, 1.5, 0)}]
 		"park_lamp":
 			return [{"shape": "cylinder", "radius": 0.13, "height": 3.0, "offset": Vector3(0, 1.5, 0)}]
-		"tree_a", "tree_b":
-			return [{"shape": "cylinder", "radius": 0.28, "height": 3.2, "offset": Vector3(0, 1.6, 0)}]
 		"hydrant":
 			return [{"shape": "cylinder", "radius": 0.2, "height": 0.7, "offset": Vector3(0, 0.35, 0)}]
 		"bin":
@@ -71,8 +69,6 @@ static func build(name: String, material: Material) -> ArrayMesh:
 		"lamp": _lamp(mb)
 		"park_lamp": _park_lamp(mb)
 		"traffic_light": _traffic_light(mb)
-		"tree_a": _tree_round(mb)
-		"tree_b": _tree_tall(mb)
 		"bush": _bush(mb)
 		"hydrant": _hydrant(mb)
 		"bin": _bin(mb)
@@ -126,28 +122,6 @@ static func _traffic_light(mb: MeshBuilder) -> void:
 				var c := h + Vector3(side * 0.153, 0.3 - i * 0.3, 0.0)
 				mb.quad(c + Vector3(0, -0.1, -0.1), c + Vector3(0, 0.1, -0.1), c + Vector3(0, 0.1, 0.1),
 					c + Vector3(0, -0.1, 0.1), Vector3(side, 0, 0), m, m, m, m, lens[i], glow)
-
-
-static func _tree_round(mb: MeshBuilder) -> void:
-	var bark := Color(0.19, 0.13, 0.09, 0.0)
-	mb.cylinder(Vector3.ZERO, 0.22, 0.13, 3.3, 6, bark, Vector2(0.95, 0.0), Vector2.ZERO, Vector2(0.0, 0.15), false)
-	var leaf := Color(0.17, 0.31, 0.10, 1.0)
-	var parts := [
-		[Vector3(0.0, 4.5, 0.0), Vector3(2.1, 1.7, 2.1), 0.0],
-		[Vector3(1.1, 4.0, 0.6), Vector3(1.45, 1.15, 1.45), 1.7],
-		[Vector3(-0.95, 4.2, -0.7), Vector3(1.5, 1.2, 1.5), 3.1],
-		[Vector3(0.2, 5.6, -0.3), Vector3(1.3, 1.05, 1.3), 4.4],
-	]
-	for part in parts:
-		mb.blob(part[0], part[1], 4, 7, leaf, MAT_LEAF, Vector2(0.0, 0.35), Vector2(0.0, 1.0), 0.1, 0.5, part[2])
-
-
-static func _tree_tall(mb: MeshBuilder) -> void:
-	var bark := Color(0.16, 0.12, 0.09, 0.0)
-	mb.cylinder(Vector3.ZERO, 0.2, 0.1, 3.0, 7, bark, Vector2(0.95, 0.0), Vector2.ZERO, Vector2(0.0, 0.15), false)
-	var leaf := Color(0.11, 0.25, 0.11, 1.0)
-	mb.blob(Vector3(0.0, 5.0, 0.0), Vector3(1.25, 3.3, 1.25), 6, 7, leaf, MAT_LEAF, Vector2(0.0, 0.3), Vector2(0.0, 1.0), 0.08, 0.5, 0.6)
-	mb.blob(Vector3(0.25, 7.6, 0.1), Vector3(0.85, 2.0, 0.85), 5, 7, leaf, MAT_LEAF, Vector2(0.0, 0.6), Vector2(0.0, 1.2), 0.08, 0.4, 2.2)
 
 
 static func _bush(mb: MeshBuilder) -> void:

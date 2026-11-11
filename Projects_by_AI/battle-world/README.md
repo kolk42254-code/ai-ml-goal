@@ -13,11 +13,21 @@ The game is being built **part by part**. This folder holds **Part 1: the founda
 | ![Start of the game](docs/screenshots/part1_start.jpg) | ![The park](docs/screenshots/part1_park.jpg) |
 | ![The whole city from the air](docs/screenshots/part1_city_air.jpg) | ![Pause menu](docs/screenshots/part1_pause.jpg) |
 
+The five kinds of trees:
+
+![Cherry, spruce, maple, bare oak and green oak](docs/screenshots/trees_five_kinds.jpg)
+
+| | |
+|---|---|
+| ![Cherry trees along an avenue](docs/screenshots/trees_avenue.jpg) | ![Cherry trees by the park pond](docs/screenshots/trees_park_pond.jpg) |
+
 ## What Part 1 has
 
 - **A city to fight in**: 46 blocks on an island about 530 m wide. Downtown glass towers, shops,
   brick homes, a park, a car park, factories, a harbour with containers and cranes, and one very tall
-  landmark tower you can see from everywhere. About 230 buildings, 640 parked cars and 630 trees.
+  landmark tower you can see from everywhere. About 230 buildings, 640 parked cars and 580 trees.
+- **Five kinds of trees**: pink cherry blossom, spruce, orange autumn maple, a bare brown oak and a
+  big green oak. Each was designed from a reference photo.
 - **A hero** you see from behind: walk, run, sprint, jump and crouch. The body and all its movement
   are made by code (no animation files).
 - **Touch controls**: move stick on the left, drag on the right to look, buttons for jump, crouch and sprint.
@@ -32,7 +42,8 @@ There is **no fighting yet**. Weapons and enemy fighters come in Part 2.
 | Part | What | Status |
 |---|---|---|
 | 1 | Foundation: city, hero, camera, touch controls, HUD, Android build | Done |
-| 2 | Combat: weapons, shooting, health, enemy fighters | Next |
+| 1b | Redesign of every city thing from reference pictures, one at a time. Trees are done | Now |
+| 2 | Combat: weapons, shooting, health, enemy fighters | After 1b |
 | 3 | Battle royale rules: drop in, loot, shrinking safe zone, last one alive wins | |
 | 4 | Bigger world: more districts, vehicles to drive, smarter enemies | |
 | 5 | Polish: better graphics and effects, sound and music, main menu, progress | |
@@ -42,7 +53,7 @@ There is **no fighting yet**. Weapons and enemy fighters come in Part 2.
 
 You need an Android phone with a 64-bit system (almost every phone from the last 6 years), Android 7 or newer.
 
-1. Copy the file `BattleWorld-0.1.0-debug.apk` to the phone.
+1. Copy the file `BattleWorld-0.1.1-debug.apk` to the phone.
 2. Tap the file. Android asks if you allow installing from this source: allow it.
 3. Open **Battle World**.
 
@@ -84,7 +95,7 @@ The APK file is not stored on GitHub (it is 47 MB). Build it yourself with the s
    tools/build_apk.sh
    ```
 
-   The app appears in `build/BattleWorld-0.1.0-debug.apk`.
+   The app appears in `build/BattleWorld-0.1.1-debug.apk`.
 
 The app is signed with the test key in `android/debug.keystore` (password `android`). This key is not a
 secret. It only exists so that a new test build can be installed over the old one. A Play Store release
@@ -98,8 +109,9 @@ tools/test.sh
 
 This runs three sets of checks without a screen:
 
-- **City data** (15 checks): the same seed always builds the same city, no buildings overlap,
-  no lamp or tree stands inside a building, every start place is free.
+- **City data** (17 checks): the same seed always builds the same city, no buildings overlap,
+  no lamp or tree stands inside a building, every start place is free, all five kinds of trees
+  are planted and the park trees keep their distance.
 - **The game plays itself with the keyboard** (20 checks): run, sprint, jump height, stepping up a kerb,
   being stopped by a wall, turning the camera, crouching, pausing.
 - **The same with touch controls** (24 checks): the move stick, look dragging and the jump button,
@@ -120,14 +132,14 @@ run on a real phone, so real speed and feel on a phone are still unknown.
 |---|---|
 | `scenes/` | `main.tscn`, the scene the game starts with |
 | `scripts/core/` | `game.gd` starts everything. `controls.gd` and `settings.gd` are always loaded |
-| `scripts/world/` | The city: `city_layout.gd` plans it as data, `city_builder.gd` makes the 3D shapes, `prop_library.gd` makes lamps, trees and cars |
+| `scripts/world/` | The city: `city_layout.gd` plans it as data, `city_builder.gd` makes the 3D shapes, `prop_library.gd` makes lamps and cars, `tree_library.gd` loads the trees |
 | `scripts/player/` | The hero: movement, camera, the body (`character_rig.gd`) and its animation (`character_animator.gd`) |
 | `scripts/ui/` | HUD, touch controls and pause menu |
 | `scripts/util/` | `mesh_builder.gd`, a helper for making 3D shapes from code |
 | `shaders/` | Small GPU programs: building fronts with windows, roads with painted lines, sky, water |
-| `assets/` | Pictures for the ground, the sky photo, the font and the app icon |
+| `assets/` | Pictures for the ground and the leaves, the tree models, the sky photo, the font and the app icon |
 | `tests/` | The automatic checks |
-| `tools/` | Scripts to build the app, run tests, take pictures and remake the icon |
+| `tools/` | Scripts to build the app, run tests, take pictures, remake the icon and grow the trees (`bake_trees.sh`) |
 
 ## How some things work
 
@@ -137,6 +149,12 @@ run on a real phone, so real speed and feel on a phone are still unknown.
   street grid numbers, so they stay sharp at any distance.
 - **The hero's walk has no animation files.** `character_animator.gd` works out where each foot should
   be for every moment of a step, then bends hip and knee so the foot reaches that place (*two-bone IK*).
+- **Trees are grown, not drawn.** `tools/tree_maker.gd` scatters target points inside the shape a
+  crown should have, then lets branches grow towards them step by step (*space colonisation*).
+  Thick branches become tubes; leaves are flat cards with a painted leafy twig, grouped in round
+  clumps. Growing takes time, so it is done once by `tools/bake_trees.sh` and saved as model files.
+- **Far trees are pictures.** Beyond about 50 m a tree is drawn as two crossed flat photos of itself.
+  That is why hundreds of trees can be on screen on a phone.
 - **One file per job.** For example, the hero only reads simple values from `controls.gd`, so it does not
   care if you use a keyboard, a gamepad or a touch screen.
 

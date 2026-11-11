@@ -16,18 +16,19 @@ const PATH := "user://settings.cfg"
 ##   rooms        1 = draw fake rooms behind windows, 0 = flat windows
 ##   props        how many small street objects are kept (0..1)
 ##   view_dist    how far the camera can see (metres)
+##   tree_lod     up to this distance trees are full models, beyond it flat pictures (metres)
 const PRESETS := {
 	Quality.LOW: {
 		"name": "Low", "scale": 0.6, "msaa": 0, "fxaa": false, "shadow_size": 0,
-		"shadow_dist": 0.0, "glow": false, "rooms": 0.0, "props": 0.45, "view_dist": 420.0,
+		"shadow_dist": 0.0, "glow": false, "rooms": 0.0, "props": 0.45, "view_dist": 420.0, "tree_lod": 24.0,
 	},
 	Quality.MEDIUM: {
 		"name": "Medium", "scale": 0.8, "msaa": 0, "fxaa": true, "shadow_size": 2048,
-		"shadow_dist": 70.0, "glow": true, "rooms": 1.0, "props": 0.8, "view_dist": 650.0,
+		"shadow_dist": 70.0, "glow": true, "rooms": 1.0, "props": 0.8, "view_dist": 650.0, "tree_lod": 48.0,
 	},
 	Quality.HIGH: {
 		"name": "High", "scale": 1.0, "msaa": 1, "fxaa": true, "shadow_size": 4096,
-		"shadow_dist": 130.0, "glow": true, "rooms": 1.0, "props": 1.0, "view_dist": 900.0,
+		"shadow_dist": 130.0, "glow": true, "rooms": 1.0, "props": 1.0, "view_dist": 900.0, "tree_lod": 90.0,
 	},
 }
 

@@ -65,6 +65,8 @@ func _process(delta: float) -> void:
 	var back_free := _free_part(from, back)
 	_closeness = back_free if back_free < _closeness else lerpf(_closeness, back_free, 1.0 - exp(-5.0 * delta))
 	global_transform = Transform3D(aim, from + back * _closeness)
+	# The tree shaders need to know where the camera is (see shaders/tree.gdshader).
+	RenderingServer.global_shader_parameter_set("viewer_pos", global_position)
 	camera.fov = lerpf(camera.fov, base_fov + (6.0 if hero.sprinting else 0.0), 1.0 - exp(-6.0 * delta))
 
 

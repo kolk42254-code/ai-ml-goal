@@ -14,6 +14,7 @@ The files were renamed and saved again at a smaller size.
 | `concrete_*.jpg` | [Concrete 034](https://ambientcg.com/view?id=Concrete034) |
 | `cobble_*.jpg` | [Paving Stones 070](https://ambientcg.com/view?id=PavingStones070) |
 | `grass_*.jpg` | [Grass 004](https://ambientcg.com/view?id=Grass004) |
+| `trees/bark_color.jpg` | [Bark 001](https://ambientcg.com/view?id=Bark001) |
 
 ## Sky: Poly Haven (CC0)
 
@@ -33,5 +34,10 @@ Built with [Godot Engine](https://godotengine.org) 4.7.2. Licence: <https://godo
 ## Made in this project
 
 Everything else was made for this project: all code, the city, the fighter's body and animation,
-the cars, trees and other objects (all built by code), the shaders, the app icon,
+the cars and other objects (all built by code), the shaders, the app icon,
 and `assets/textures/noise_rgb.png` (made by `tools/make_noise.gd`).
+
+The trees were designed to look like reference photos of a cherry tree, a spruce, a maple and two
+oaks, but nothing from those photos is in the game. The tree models (`assets/models/trees/`) are
+grown by `tools/tree_maker.gd`, and the leaf pictures (`assets/textures/trees/leaves_*.png` and
+`far_*.png`) are painted by `tools/make_tree_textures.py`.

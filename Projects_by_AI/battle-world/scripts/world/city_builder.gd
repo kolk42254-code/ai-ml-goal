@@ -5,10 +5,14 @@ extends Node3D
 const CityLayout := preload("res://scripts/world/city_layout.gd")
 const MeshBuilder := preload("res://scripts/util/mesh_builder.gd")
 const PropLibrary := preload("res://scripts/world/prop_library.gd")
+const TreeLibrary := preload("res://scripts/world/tree_library.gd")
 
 ## Props are grouped into SECTORS x SECTORS squares, so far-away groups are skipped.
 const SECTORS := 5
 const WORLD_LAYER := 1
+## Full tree models are grouped in squares of this size (metres). A whole square
+## is skipped when it is too far away to show full models.
+const TREE_CELL := 40.0
 
 var layout: CityLayout
 var materials := {}
@@ -18,6 +22,7 @@ var minimap_image: Image
 var _prop_nodes: Array[MultiMeshInstance3D] = []
 var _prop_names: Array[String] = []
 var _shape_cache := {}
+var _tree_groups: Array[MultiMeshInstance3D] = []
 
 
 func build(p_layout: CityLayout) -> void:
@@ -28,6 +33,7 @@ func build(p_layout: CityLayout) -> void:
 	_build_water()
 	_build_chunks()
 	_build_props()
+	_build_trees()
 
 
 # ---------------------------------------------------------------------------
@@ -407,6 +413,8 @@ func _sector_of(pos: Vector3) -> int:
 func _build_props() -> void:
 	var bodies := {}
 	for name: String in layout.props:
+		if name.begins_with("tree_"):
+			continue                      # trees have their own builder below
 		var mesh := PropLibrary.build(name, materials.prop)
 		var shapes := PropLibrary.colliders(name)
 		var by_sector := {}
@@ -447,6 +455,80 @@ func _build_props() -> void:
 			_prop_names.append(name)
 
 
+# ---------------------------------------------------------------------------
+# Trees
+# ---------------------------------------------------------------------------
+
+## Every tree is added twice: as a full model (drawn only near the player) and
+## as a flat picture (drawn only far away). The shaders decide per tree which
+## of the two is visible, using the distance to the player's camera.
+func _build_trees() -> void:
+	var bodies := {}
+	for name: String in layout.props:
+		if not name.begins_with("tree_"):
+			continue
+		var kind := TreeLibrary.kind_of(name)
+		var model := TreeLibrary.model(kind)
+		var far_model := TreeLibrary.far_mesh(model)
+		var near_material := TreeLibrary.near_material(kind)
+		var far_material := TreeLibrary.far_material(kind, model)
+		var cells := {}
+		var sectors := {}
+		for item: Dictionary in layout.props[name]:
+			var cell := Vector2i(floori(item.pos.x / TREE_CELL), floori(item.pos.z / TREE_CELL))
+			if not cells.has(cell):
+				cells[cell] = []
+			cells[cell].append(item)
+			var sector := _sector_of(item.pos)
+			if not sectors.has(sector):
+				sectors[sector] = []
+			sectors[sector].append(item)
+			# The trunk blocks movement.
+			if not bodies.has(sector):
+				var body := StaticBody3D.new()
+				body.name = "Trees%dBody" % sector
+				body.collision_layer = WORLD_LAYER
+				body.collision_mask = 0
+				add_child(body)
+				bodies[sector] = body
+			var trunk := snappedf(float(TreeLibrary.TRUNK_RADIUS[kind]) * float(item.scale), 0.05)
+			_add_shape(bodies[sector], _trunk_shape(trunk), Transform3D(Basis.IDENTITY, item.pos + Vector3(0.0, 1.5, 0.0)))
+		for cell: Vector2i in cells:
+			var group := _tree_group(model, near_material, cells[cell], "%s_near_%d_%d" % [name, cell.x, cell.y])
+			_tree_groups.append(group)
+		for sector: int in sectors:
+			var group := _tree_group(far_model, far_material, sectors[sector], "%s_far_%d" % [name, sector])
+			group.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func _tree_group(mesh: Mesh, material: Material, items: Array, node_name: String) -> MultiMeshInstance3D:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = mesh
+	mm.instance_count = items.size()
+	for i in items.size():
+		var item: Dictionary = items[i]
+		mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, item.yaw).scaled(Vector3.ONE * float(item.scale)), item.pos))
+		mm.set_instance_color(i, item.tint)
+	var group := MultiMeshInstance3D.new()
+	group.name = node_name
+	group.multimesh = mm
+	group.material_override = material
+	add_child(group)
+	return group
+
+
+func _trunk_shape(radius: float) -> CylinderShape3D:
+	var key := "trunk%.2f" % radius
+	if not _shape_cache.has(key):
+		var cyl := CylinderShape3D.new()
+		cyl.radius = radius
+		cyl.height = 3.0
+		_shape_cache[key] = cyl
+	return _shape_cache[key]
+
+
 func _prop_shape(name: String, s: Dictionary) -> Shape3D:
 	var key := "%s%s" % [name, s]
 	if not _shape_cache.has(key):
@@ -469,6 +551,10 @@ func _prop_shape(name: String, s: Dictionary) -> Shape3D:
 ## Applies the parts of a graphics preset that belong to the city.
 func apply_quality(preset: Dictionary) -> void:
 	(materials.building as ShaderMaterial).set_shader_parameter("rooms", preset.rooms)
+	# Full tree models are shown up to `tree_lod` metres, flat pictures beyond.
+	RenderingServer.global_shader_parameter_set("tree_lod", float(preset.tree_lod))
+	for group in _tree_groups:
+		group.visibility_range_end = float(preset.tree_lod) + TREE_CELL + 14.0
 	var sector_radius := layout.bounds.size.x / SECTORS * 0.75
 	for i in _prop_nodes.size():
 		var name := _prop_names[i]

@@ -13,6 +13,9 @@ const VIEWS := [
 	["harbour", Vector3(-95, 3.0, 199), Vector3(-30, 6, 215), 70.0],
 	["homes", Vector3(-184, 1.7, -150), Vector3(-200, 9, -215), 70.0],
 	["carpark", Vector3(-150, 2.5, -60), Vector3(-170, 0.5, -90), 70.0],
+	["park_wide", Vector3(-84, 9.0, 44), Vector3(-120, 3.0, 0), 62.0],
+	["park_pond", Vector3(-70, 1.8, 20), Vector3(-83, 2.5, 7), 70.0],
+	["park_oak", Vector3(-150, 1.8, -12), Vector3(-128, 4.0, 6), 70.0],
 ]
 
 func _ready() -> void:
@@ -32,6 +35,7 @@ func _ready() -> void:
 			continue
 		cam.fov = v[3]
 		cam.look_at_from_position(v[1], v[2], Vector3.UP)
+		RenderingServer.global_shader_parameter_set("viewer_pos", v[1])
 		for i in 3:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
