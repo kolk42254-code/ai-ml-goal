@@ -1,0 +1,11 @@
+# Godot's cache folder (it is rebuilt automatically when the project opens)
+.godot/
+
+# Built games: these are big files, so they are not uploaded to GitHub
+build/
+*.apk
+*.aab
+*.idsig
+
+# Android build folder Godot creates when "Use Gradle Build" is on
+android/build/

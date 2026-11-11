@@ -19,6 +19,7 @@ My journey learning **Python, AI and Machine Learning**: practice programs, smal
 | [Eye_animation](Projects_by_AI/Eye_animation) | Eye animations with a menu (`Eye_animation.py`): eye with heart, eye blinking, and eye-to-space ASCII art |
 | [wizard-chess-3d](Projects_by_AI/wizard-chess-3d) | Wizard Chess 3D: a 3D chess game in the browser with a computer opponent (made in Google AI Studio) |
 | [shop-bot-old](Projects_by_AI/shop-bot-old) | An older version of the shop bot, kept for reference |
+| [battle-world](Projects_by_AI/battle-world) | **Battle World**: a 3D battle royale game for Android in a modern city, made with the Godot engine. Being built part by part (Part 1: city, hero, touch controls) |
 
 ## How to run
 
@@ -39,3 +40,5 @@ python Projects_by_AI/Eye_animation/Eye_animation.py
 Shop website: follow [shop-bot/README.md](shop-bot/README.md).
 
 Wizard Chess 3D: follow [its README](Projects_by_AI/wizard-chess-3d/README.md) (it needs Node.js).
+
+Battle World: follow [its README](Projects_by_AI/battle-world/README.md) (it needs the Godot engine, version 4.7.2).
