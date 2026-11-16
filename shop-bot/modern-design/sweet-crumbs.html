@@ -1,0 +1,731 @@
+<title>Sweet Crumbs Bakery</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Baloo+Tamma+2:wght@600;800&family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
+<style>
+/* Layout: a bright shop counter. Living greeting up top, filterable counter grid, cart that slides in from the right. */
+:root {
+  --bg: #f3f7ef;          /* pistachio counter */
+  --surface: #ffffff;
+  --surface-2: #e7efe0;
+  --fg: #2b1a15;          /* cocoa */
+  --fg-soft: #6a5650;
+  --line: rgba(43, 26, 21, .12);
+  --berry: #d6245f;       /* primary actions */
+  --berry-deep: #a8164a;
+  --on-berry: #ffffff;
+  --mango: #ffb020;       /* price tags, highlights */
+  --mint: #2f9e74;        /* open / success */
+  --plate: rgba(43, 26, 21, .08);
+  --blob-1: #ffc7d8;
+  --blob-2: #ffe1a3;
+  --blob-3: #bfe7cf;
+  --shadow: 0 1px 2px rgba(43,26,21,.06), 0 12px 32px -12px rgba(43,26,21,.22);
+
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "DM Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --kn: "Baloo Tamma 2", "Noto Sans Kannada", var(--display);
+
+  --r-lg: 28px;
+  --r-md: 18px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17110f; --surface: #221917; --surface-2: #2d221f; --fg: #fbeee8; --fg-soft: #c3aaa2;
+    --line: rgba(251, 238, 232, .12); --berry: #ff4f87; --berry-deep: #ff7aa5; --on-berry: #2a0b16;
+    --mango: #ffc04d; --mint: #4fd1a0; --plate: rgba(255,255,255,.07);
+    --blob-1: #6b1736; --blob-2: #6b4a10; --blob-3: #14523b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 40px -14px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17110f; --surface: #221917; --surface-2: #2d221f; --fg: #fbeee8; --fg-soft: #c3aaa2;
+  --line: rgba(251, 238, 232, .12); --berry: #ff4f87; --berry-deep: #ff7aa5; --on-berry: #2a0b16;
+  --mango: #ffc04d; --mint: #4fd1a0; --plate: rgba(255,255,255,.07);
+  --blob-1: #6b1736; --blob-2: #6b4a10; --blob-3: #14523b;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 40px -14px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--body); font-size: 16px; line-height: 1.55;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 60; background: var(--bg); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: -.02em; }
+p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--mango); outline-offset: 3px; border-radius: 10px; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- ambient blobs ---------- */
+.blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.blob { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; filter: blur(70px); opacity: .55; animation: drift 22s var(--ease) infinite alternate; }
+.blob:nth-child(1) { background: var(--blob-1); top: -18vmax; left: -10vmax; }
+.blob:nth-child(2) { background: var(--blob-2); top: 10vmax; right: -16vmax; animation-duration: 28s; animation-delay: -6s; }
+.blob:nth-child(3) { background: var(--blob-3); bottom: -22vmax; left: 20vmax; animation-duration: 32s; animation-delay: -12s; }
+@keyframes drift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6vmax, 4vmax) scale(1.12); }
+  100% { transform: translate(-4vmax, 8vmax) scale(.94); }
+}
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
+  backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; }
+.brand { white-space: nowrap; display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 800; font-size: 1.2rem; text-decoration: none; color: var(--fg); }
+.brand-mark { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--berry); color: var(--on-berry); transition: transform .5s var(--spring); }
+.brand:hover .brand-mark { transform: rotate(-12deg) scale(1.08); }
+.nav { display: flex; align-items: center; gap: 6px; }
+.nav a { color: var(--fg-soft); text-decoration: none; font-weight: 500; padding: 8px 12px; border-radius: 999px; transition: background .25s, color .25s; }
+.nav a:hover { background: var(--surface-2); color: var(--fg); }
+@media (max-width: 720px) { .nav a { display: none; } }
+@media (max-width: 380px) { .cart-btn .label { display: none; } }
+
+/* ---------- buttons ---------- */
+.btn {
+  --mx: 50%; --my: 50%;
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; cursor: pointer; border-radius: 999px;
+  padding: 14px 24px; font-weight: 700; font-size: 1rem; text-decoration: none; white-space: nowrap;
+  background: var(--berry); color: var(--on-berry);
+  box-shadow: 0 8px 22px -10px var(--berry);
+  transition: transform .35s var(--spring), box-shadow .35s var(--ease), background .25s;
+}
+.btn::before { /* spotlight follows the pointer */
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(160px circle at var(--mx) var(--my), rgba(255,255,255,.38), transparent 60%);
+  opacity: 0; transition: opacity .3s;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -12px var(--berry); }
+.btn:hover::before { opacity: 1; }
+.btn:active { transform: translateY(0) scale(.96); }
+.btn.ghost { background: var(--surface); color: var(--fg); box-shadow: inset 0 0 0 1.5px var(--line); }
+.btn.small { padding: 10px 16px; font-size: .92rem; }
+.btn .ripple { position: absolute; border-radius: 50%; transform: scale(0); background: rgba(255,255,255,.5); animation: ripple .6s var(--ease) forwards; pointer-events: none; }
+@keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+.cart-btn { padding: 10px 16px 10px 14px; }
+.cart-count {
+  min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--on-berry); color: var(--berry); font-size: .82rem; font-variant-numeric: tabular-nums;
+}
+.cart-btn.bump { animation: bump .5s var(--spring); }
+@keyframes bump { 30% { transform: scale(1.18) rotate(-4deg); } 60% { transform: scale(.95); } }
+
+/* ---------- hero / greeting ---------- */
+.hero { padding-block: clamp(40px, 7vw, 88px) 40px; }
+.hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(24px, 4vw, 56px); align-items: center; }
+@media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
+.status {
+  display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 10px; border-radius: 999px;
+  background: var(--surface); box-shadow: var(--shadow); font-weight: 600; font-size: .92rem;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 0 var(--mint); animation: pulse 2s infinite; }
+.status.closed .dot { background: var(--fg-soft); animation: none; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mint) 60%, transparent); } 100% { box-shadow: 0 0 0 12px transparent; } }
+
+.hello { margin-top: 22px; font-size: clamp(2.6rem, 7vw, 5.4rem); font-weight: 800; }
+.hello .word { display: inline-block; animation: rise .9s var(--spring) both; }
+.hello .word:nth-child(2) { animation-delay: .08s; }
+.hello .word:nth-child(3) { animation-delay: .16s; }
+.hello .wave { display: inline-block; transform-origin: 70% 80%; animation: rise .9s var(--spring) .24s both, wave 2.4s ease-in-out 1.2s 2; }
+@keyframes rise { from { transform: translateY(.45em) rotate(4deg); opacity: .2; filter: blur(6px); } }
+@keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(16deg); } 20%, 40% { transform: rotate(-8deg); } }
+
+.lang-line { margin-top: 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: clamp(1.15rem, 2.4vw, 1.5rem); color: var(--fg-soft); }
+.lang-slot { position: relative; display: inline-grid; height: 1.6em; overflow: hidden; vertical-align: bottom; }
+.lang-slot span {
+  grid-area: 1 / 1; font-family: var(--kn); font-weight: 800; color: var(--berry);
+  transition: transform .7s var(--spring), opacity .5s var(--ease);
+}
+.lang-slot span.out { transform: translateY(-110%); opacity: 0; }
+.lang-slot span.in { transform: translateY(110%); opacity: 0; }
+
+.lede { margin-top: 18px; max-width: 52ch; font-size: 1.12rem; color: var(--fg-soft); }
+.cta-row { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+.countdown {
+  margin-top: 26px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 14px 18px; border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow); max-width: 520px;
+}
+.countdown strong { font-family: var(--display); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.countdown small { color: var(--fg-soft); display: block; }
+
+/* hero showcase */
+.showcase { position: relative; aspect-ratio: 1; max-width: 100%; width: min(460px, 100%); justify-self: center; }
+.showcase .ring { position: absolute; inset: 6%; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--berry) 35%, transparent); animation: spin 40s linear infinite; }
+.showcase .disc { position: absolute; inset: 14%; border-radius: 50%; background: radial-gradient(circle at 30% 30%, var(--surface), var(--surface-2)); box-shadow: var(--shadow); }
+.showcase svg.hero-cake { position: absolute; inset: 16%; width: 68%; height: 68%; animation: float 6s ease-in-out infinite; transition: opacity .35s var(--ease), transform .5s var(--spring); }
+.showcase .tag {
+  position: absolute; padding: 10px 14px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow);
+  font-weight: 700; font-size: .9rem; animation: float 7s ease-in-out infinite;
+}
+.showcase .tag small { display: block; font-weight: 500; color: var(--fg-soft); font-size: .78rem; }
+.tag.t1 { top: 6%; right: 0; animation-delay: -2s; }
+.tag.t2 { bottom: 10%; left: -2%; animation-delay: -4s; }
+.tag .price { color: var(--berry); }
+.picker { position: absolute; bottom: -4px; right: 4%; display: flex; gap: 8px; }
+.picker button { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--surface); cursor: pointer; box-shadow: var(--shadow); transition: transform .35s var(--spring); }
+.picker button[aria-pressed="true"] { transform: scale(1.25); outline: 2px solid var(--fg); outline-offset: 2px; }
+@keyframes float { 50% { transform: translateY(-12px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- marquee ---------- */
+.marquee { margin-block: 24px 8px; overflow: hidden; border-block: 1px solid var(--line); background: var(--surface); }
+.marquee-track { display: flex; gap: 40px; width: max-content; padding-block: 14px; animation: scroll 32s linear infinite; font-family: var(--display); font-weight: 700; font-size: 1.1rem; }
+.marquee-track span { display: inline-flex; align-items: center; gap: 40px; white-space: nowrap; }
+.marquee-track span::after { content: "✦"; color: var(--mango); }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes scroll { to { transform: translateX(-50%); } }
+
+/* ---------- counter ---------- */
+section.counter { padding-block: 56px 40px; }
+.section-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
+.eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; font-weight: 700; color: var(--berry); margin-bottom: 8px; }
+h2 { font-size: clamp(2rem, 4.4vw, 3rem); }
+.filters { position: relative; display: inline-flex; gap: 4px; padding: 5px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow); max-width: 100%; overflow-x: auto; }
+.filters button { position: relative; z-index: 1; border: 0; background: none; padding: 9px 16px; border-radius: 999px; cursor: pointer; font-weight: 600; color: var(--fg-soft); white-space: nowrap; transition: color .3s; }
+.filters button[aria-pressed="true"] { color: var(--on-berry); }
+.filters .pill { position: absolute; z-index: 0; top: 5px; bottom: 5px; border-radius: 999px; background: var(--berry); transition: left .5s var(--spring), width .5s var(--spring); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+.card {
+  --rx: 0deg; --ry: 0deg;
+  position: relative; display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 16px 18px; border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow);
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform .5s var(--ease), box-shadow .4s, opacity .4s;
+  animation: cardIn .6s var(--spring) both;
+  min-width: 0;
+}
+.card:hover { box-shadow: 0 2px 4px rgba(43,26,21,.06), 0 24px 48px -16px color-mix(in srgb, var(--berry) 45%, transparent); }
+@keyframes cardIn { from { transform: translateY(18px) scale(.97); opacity: .3; } }
+.art { position: relative; border-radius: 20px; aspect-ratio: 4 / 3; max-width: 100%; display: grid; place-items: center; overflow: hidden; }
+.art svg { width: 82%; height: auto; transition: transform .6s var(--spring); }
+.card:hover .art svg { transform: scale(1.08) rotate(-3deg) translateY(-4px); }
+.badge { position: absolute; top: 10px; left: 10px; padding: 4px 10px; border-radius: 999px; background: var(--surface); font-size: .75rem; font-weight: 700; letter-spacing: .04em; }
+.card h3 { font-size: 1.3rem; }
+.card .desc { color: var(--fg-soft); font-size: .93rem; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.price-tag { font-family: var(--display); font-weight: 800; font-size: 1.45rem; font-variant-numeric: tabular-nums; }
+.price-tag small { font-family: var(--body); font-weight: 500; font-size: .8rem; color: var(--fg-soft); }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface-2); }
+.seg button { border: 0; background: none; cursor: pointer; padding: 6px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; color: var(--fg-soft); transition: background .3s var(--ease), color .3s; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: .88rem; font-weight: 600; color: var(--fg-soft); user-select: none; }
+.toggle input { appearance: none; width: 38px; height: 22px; border-radius: 999px; background: var(--surface-2); position: relative; cursor: pointer; transition: background .3s; box-shadow: inset 0 0 0 1px var(--line); margin: 0; }
+.toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--fg-soft); transition: transform .4s var(--spring), background .3s; }
+.toggle input:checked { background: var(--mint); }
+.toggle input:checked::after { transform: translateX(16px); background: #fff; }
+.add { width: 100%; margin-top: auto; }
+.add.added { background: var(--mint); box-shadow: 0 8px 22px -10px var(--mint); }
+.empty { padding: 40px; text-align: center; color: var(--fg-soft); }
+
+/* ---------- info strip ---------- */
+.info { padding-block: 32px 72px; }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.info-item { padding: 22px; border-radius: var(--r-md); background: var(--surface-2); transition: transform .4s var(--spring), background .3s; }
+.info-item:hover { transform: translateY(-4px); background: var(--surface); box-shadow: var(--shadow); }
+.info-item .big { font-family: var(--display); font-weight: 800; font-size: 1.9rem; color: var(--berry); }
+.info-item p { color: var(--fg-soft); margin-top: 4px; }
+
+footer { border-top: 1px solid var(--line); padding-block: 28px 40px; color: var(--fg-soft); font-size: .92rem; }
+footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.copy { border: 0; background: var(--surface-2); padding: 4px 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .85rem; }
+
+/* ---------- cart drawer ---------- */
+.scrim { position: fixed; inset: 0; z-index: 70; background: rgba(20, 10, 8, .45); backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .4s var(--ease); }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: fixed; z-index: 80; top: 0; right: 0; bottom: 0; width: min(440px, 100vw);
+  background: var(--bg); box-shadow: -20px 0 60px -20px rgba(0,0,0,.4);
+  display: flex; flex-direction: column;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) 20px;
+  transform: translateX(105%); transition: transform .6s var(--spring);
+}
+.drawer.open { transform: none; }
+.drawer-head { display: flex; justify-content: space-between; align-items: center; }
+.drawer-head h2 { font-size: 1.8rem; }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; background: var(--surface-2); display: grid; place-items: center; transition: transform .4s var(--spring); }
+.icon-btn:hover { transform: rotate(90deg); }
+.lines { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-block: 18px; padding: 2px; }
+.line { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; padding: 10px; border-radius: var(--r-md); background: var(--surface); animation: cardIn .5s var(--spring) both; }
+.line .thumb { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; }
+.line .thumb svg { width: 88%; }
+.line .meta { min-width: 0; }
+.line .meta b { display: block; }
+.line .meta small { color: var(--fg-soft); }
+.stepper { display: inline-flex; align-items: center; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 3px; }
+.stepper button { width: 28px; height: 28px; border: 0; border-radius: 50%; cursor: pointer; background: var(--surface); font-weight: 700; transition: transform .3s var(--spring); }
+.stepper button:active { transform: scale(.85); }
+.stepper span { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; }
+.free-bar { padding: 14px; border-radius: var(--r-md); background: var(--surface); font-size: .9rem; }
+.bar { height: 8px; border-radius: 999px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--mango), var(--berry)); transition: width .8s var(--spring); }
+.totals { display: grid; gap: 6px; margin-block: 14px; font-variant-numeric: tabular-nums; }
+.totals div { display: flex; justify-content: space-between; }
+.totals .grand { font-family: var(--display); font-weight: 800; font-size: 1.35rem; padding-top: 8px; border-top: 1px dashed var(--line); }
+.checkout { display: grid; gap: 10px; }
+.checkout label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; color: var(--fg-soft); }
+.checkout input, .checkout select { padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); transition: border-color .25s, box-shadow .25s; }
+.checkout input:focus, .checkout select:focus { outline: none; border-color: var(--berry); box-shadow: 0 0 0 4px color-mix(in srgb, var(--berry) 18%, transparent); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.done { text-align: center; padding: 30px 10px; display: grid; gap: 12px; justify-items: center; }
+.done .tick { width: 84px; height: 84px; border-radius: 50%; background: var(--mint); color: #fff; display: grid; place-items: center; animation: pop .7s var(--spring); }
+@keyframes pop { from { transform: scale(0) rotate(-40deg); } }
+.note { font-size: .8rem; color: var(--fg-soft); }
+
+.fly { position: fixed; top: 0; left: 0; margin: -9px 0 0 -9px; z-index: 90; width: 18px; height: 18px; border-radius: 50%; background: var(--berry); pointer-events: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--berry) 30%, transparent); }
+
+.toast { position: fixed; z-index: 95; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 200%); visibility: hidden; padding: 12px 18px; border-radius: 999px; background: var(--fg); color: var(--bg); font-weight: 600; transition: transform .5s var(--spring), visibility .5s; max-width: calc(100vw - 32px); }
+.toast.show { transform: translate(-50%, 0); visibility: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<div class="blobs" aria-hidden="true"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M5 20v-6a7 7 0 0 1 14 0v6M12 7V4M9 11h.01M15 11h.01"/></svg>
+      </span>
+      Sweet Crumbs
+    </a>
+    <nav class="nav">
+      <a href="#counter">Counter</a>
+      <a href="#visit">Visit us</a>
+      <button class="btn small cart-btn" id="open-cart" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+        <span class="label">Your box</span> <span class="cart-count" id="cart-count">0</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="status" id="status"><span class="dot" aria-hidden="true"></span><span id="status-text">Open today, 9 AM to 9 PM</span></p>
+        <h1 class="hello" id="hello"><span class="word">Good</span> <span class="word" id="hello-time">evening</span><span class="wave" aria-hidden="true">👋</span></h1>
+        <p class="lang-line">
+          <span class="lang-slot" aria-hidden="true"><span id="lang-a">ನಮಸ್ಕಾರ</span><span id="lang-b" class="in">नमस्ते</span></span>
+          <span id="hello-sub">the ovens are warm.</span>
+        </p>
+        <p class="lede">Fresh cakes, pastries and puffs from a family bakery on Market Road. Every cake can be made eggless, and we'll write a name on it for free.</p>
+        <div class="cta-row">
+          <a class="btn" href="#counter" id="cta-shop">See today's counter
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn ghost" href="#visit">Hours and delivery</a>
+        </div>
+        <div class="countdown" id="countdown">
+          <div>
+            <small>Order a cake for tomorrow in the next</small>
+            <strong id="cd-time">--h --m</strong>
+          </div>
+          <small>Cake orders close at 6:00 PM for next-day pickup or delivery.</small>
+        </div>
+      </div>
+
+      <div class="showcase" id="showcase">
+        <div class="ring"></div>
+        <div class="disc"></div>
+        <div id="hero-art"></div>
+        <div class="tag t1"><span id="hero-name">Red Velvet</span> <span class="price" id="hero-price">₹550</span><small>½ kg, eggless on request</small></div>
+        <div class="tag t2">Free delivery<small>within 3 km, orders over ₹500</small></div>
+        <div class="picker" id="picker" role="group" aria-label="Preview a cake"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track" id="marquee"></div>
+  </div>
+
+  <section class="counter" id="counter">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Baked this morning</p>
+          <h2>Today's counter</h2>
+        </div>
+        <div class="filters" id="filters" role="group" aria-label="Show a category">
+          <span class="pill" aria-hidden="true"></span>
+          <button type="button" data-f="all" aria-pressed="true">Everything</button>
+          <button type="button" data-f="cake" aria-pressed="false">Cakes</button>
+          <button type="button" data-f="pastry" aria-pressed="false">Pastries</button>
+          <button type="button" data-f="snack" aria-pressed="false">Puffs and cookies</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section class="info" id="visit">
+    <div class="wrap">
+      <p class="eyebrow">Good to know</p>
+      <h2 style="margin-bottom:22px">Visit or get it delivered</h2>
+      <div class="info-grid">
+        <div class="info-item"><div class="big">9 AM to 9 PM</div><p>Every day except Tuesday, when the bakery is closed.</p></div>
+        <div class="info-item"><div class="big">3 km</div><p>Free home delivery on orders of ₹500 or more. Smaller orders cost ₹40. Deliveries run 11 AM to 8 PM.</p></div>
+        <div class="info-item"><div class="big">2 days</div><p>Photo and theme cakes need two days' notice and a 50% advance by UPI.</p></div>
+        <div class="info-item"><div class="big">UPI, cash, card</div><p>Pay however you like at pickup or on delivery.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Sweet Crumbs Bakery · 12 Market Road, near the City Bus Stand</span>
+    <span>Call <span id="phone">+91 90000 00000</span> <button class="copy" id="copy-phone" type="button">Copy</button></span>
+  </div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Your box" aria-hidden="true">
+  <div class="drawer-head">
+    <h2>Your box</h2>
+    <button class="icon-btn" id="close-cart" type="button" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div id="drawer-body" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const money = n => "₹" + Number(n).toLocaleString("en-IN");
+
+/* ---------- menu (from shop_info.txt) ---------- */
+const MENU = [
+  { id: "bf", name: "Black Forest", cat: "cake", half: 450, full: 850, desc: "Chocolate sponge, whipped cream and cherries.", kind: "cake", c: ["#4a2a22", "#fff7f2", "#c21e56"], bg: "#ffe3ea", badge: "Bestseller" },
+  { id: "ct", name: "Chocolate Truffle", cat: "cake", half: 500, full: 950, desc: "Dense chocolate layers under a glossy ganache.", kind: "cake", c: ["#3a1f18", "#6b3526", "#2a140f"], bg: "#f1dfd6" },
+  { id: "pa", name: "Pineapple", cat: "cake", half: 400, full: 750, desc: "Vanilla sponge with pineapple and fresh cream.", kind: "cake", c: ["#f6dc8f", "#fffaf0", "#f2b705"], bg: "#fff1c9" },
+  { id: "bs", name: "Butterscotch", cat: "cake", half: 420, full: 800, desc: "Caramel cream and crunchy butterscotch praline.", kind: "cake", c: ["#e3b06a", "#f7e0b5", "#b9741f"], bg: "#fbe6c8" },
+  { id: "rv", name: "Red Velvet", cat: "cake", half: 550, full: 1050, desc: "Soft red sponge with cream cheese frosting.", kind: "cake", c: ["#b3123f", "#fff1ec", "#e8456f"], bg: "#ffdbe3", badge: "Most gifted" },
+  { id: "cp", name: "Chocolate pastry", cat: "pastry", price: 70, desc: "A single slice of our chocolate cake.", kind: "pastry", c: ["#4a2a22", "#7a4535", "#c21e56"], bg: "#f1dfd6" },
+  { id: "pp", name: "Pineapple pastry", cat: "pastry", price: 60, desc: "Light sponge, cream and pineapple bits.", kind: "pastry", c: ["#f6dc8f", "#fffaf0", "#f2b705"], bg: "#fff1c9" },
+  { id: "vp", name: "Veg puff", cat: "snack", price: 25, desc: "Flaky pastry filled with spiced vegetables.", kind: "puff", c: ["#e8a948", "#c97f22", "#8a4f12"], bg: "#fde8c4" },
+  { id: "np", name: "Paneer puff", cat: "snack", price: 35, desc: "Flaky pastry with masala paneer inside.", kind: "puff", c: ["#efb75a", "#cf8a2c", "#8a4f12"], bg: "#e3f1dc", badge: "Hot at 4 PM" },
+  { id: "bc", name: "Butter cookies box", cat: "snack", price: 180, desc: "A 250 g box of crisp butter cookies.", kind: "cookie", c: ["#eab46a", "#c98a3a", "#7b4a1c"], bg: "#fbe6c8" },
+];
+
+/* ---------- illustrations ---------- */
+function art(p) {
+  const [a, b, t] = p.c;
+  const plate = `<ellipse cx="100" cy="140" rx="80" ry="10" fill="rgba(43,26,21,.12)"/>`;
+  const drip = "M38 78 Q38 60 56 60 H144 Q162 60 162 78 V84 Q156 96 150 84 Q144 100 136 84 Q128 94 120 84 Q112 104 104 84 Q96 96 88 84 Q80 100 72 84 Q64 94 56 84 Q48 98 38 84Z";
+  if (p.kind === "cake") return `<svg viewBox="0 0 200 160" aria-hidden="true">${plate}
+    <rect x="38" y="64" width="124" height="72" rx="14" fill="${a}"/>
+    <rect x="38" y="98" width="124" height="9" fill="${b}" opacity=".9"/>
+    <path d="${drip}" fill="${b}"/>
+    <circle cx="70" cy="56" r="8" fill="${t}"/><circle cx="100" cy="52" r="9" fill="${t}"/><circle cx="130" cy="56" r="8" fill="${t}"/>
+    <circle cx="97" cy="49" r="2.5" fill="#fff" opacity=".7"/><circle cx="67" cy="53" r="2" fill="#fff" opacity=".7"/><circle cx="127" cy="53" r="2" fill="#fff" opacity=".7"/></svg>`;
+  if (p.kind === "pastry") return `<svg viewBox="0 0 200 160" aria-hidden="true">${plate}
+    <path d="M52 132 L60 70 L148 70 L148 132Z" fill="${a}"/>
+    <path d="M56 100 L148 100 V110 H55Z" fill="${b}"/><path d="M59 80 L148 80 V88 H58Z" fill="${b}" opacity=".85"/>
+    <path d="M56 70 Q56 58 70 58 H140 Q150 58 150 70 V74 H56Z" fill="${b}"/>
+    <circle cx="104" cy="52" r="9" fill="${t}"/><circle cx="101" cy="49" r="2.5" fill="#fff" opacity=".7"/></svg>`;
+  if (p.kind === "puff") return `<svg viewBox="0 0 200 160" aria-hidden="true">${plate}
+    <path d="M40 128 Q36 112 52 104 L120 62 Q140 52 154 66 Q168 82 158 102 L130 128Z" fill="${a}"/>
+    <path d="M52 112 L126 70 M58 122 L140 80 M80 126 L152 92" stroke="${b}" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M40 128 H130" stroke="${t}" stroke-width="5" stroke-linecap="round" opacity=".5"/></svg>`;
+  return `<svg viewBox="0 0 200 160" aria-hidden="true">${plate}
+    <circle cx="78" cy="104" r="34" fill="${a}"/><circle cx="124" cy="96" r="34" fill="${b}"/><circle cx="104" cy="66" r="30" fill="${a}"/>
+    ${[[70,96],[86,112],[118,90],[132,104],[100,60],[110,72]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.5" fill="${t}"/>`).join("")}</svg>`;
+}
+
+/* ---------- greeting (shop time, IST) ---------- */
+function shopNow() {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(new Date());
+  const get = k => parts.find(p => p.type === k)?.value;
+  return { day: get("weekday"), h: +get("hour"), m: +get("minute") };
+}
+function greet() {
+  const { day, h, m } = shopNow();
+  const part = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+  $("#hello-time").textContent = part;
+  const open = day !== "Tue" && h >= 9 && h < 21;
+  const status = $("#status");
+  status.classList.toggle("closed", !open);
+  let text, sub;
+  if (day === "Tue") { text = "Closed today (Tuesday). Back tomorrow at 9 AM"; sub = "we're resting the ovens today."; }
+  else if (h < 9) { text = "Opens today at 9 AM"; sub = "the first trays are going in."; }
+  else if (h >= 21) { text = "Closed for the night. Opens at 9 AM"; sub = "see you in the morning."; }
+  else { const left = 21 * 60 - (h * 60 + m); text = `Open now · closes in ${Math.floor(left / 60)}h ${left % 60}m`; sub = h < 12 ? "the first trays are out." : h < 17 ? "fresh puffs come out at 4." : "the ovens are still warm."; }
+  $("#status-text").textContent = text;
+  $("#hello-sub").textContent = sub;
+  const toCut = 18 * 60 - (h * 60 + m);
+  const cd = $("#countdown");
+  if (toCut > 0) { $("#cd-time").textContent = `${Math.floor(toCut / 60)}h ${String(toCut % 60).padStart(2, "0")}m`; cd.querySelector("small").textContent = "Order a cake for tomorrow in the next"; }
+  else { $("#cd-time").textContent = "Day after tomorrow"; cd.querySelector("small").textContent = "Today's 6 PM cut-off has passed. New cake orders are ready"; }
+}
+greet(); setInterval(greet, 30000);
+
+const HELLOS = ["ನಮಸ್ಕಾರ", "नमस्ते", "Hello", "வணக்கம்", "నమస్కారం"];
+let hi = 0, front = $("#lang-a"), back = $("#lang-b");
+setInterval(() => {
+  hi = (hi + 1) % HELLOS.length;
+  back.textContent = HELLOS[hi];
+  back.className = "in"; void back.offsetWidth;
+  front.className = "out"; back.className = "";
+  [front, back] = [back, front];
+  setTimeout(() => { back.className = "in"; }, 700);
+}, 2600);
+
+/* ---------- hero showcase ---------- */
+const cakes = MENU.filter(p => p.kind === "cake");
+function showHero(p) {
+  const holder = $("#hero-art");
+  holder.innerHTML = art(p).replace("<svg", '<svg class="hero-cake"');
+  $("#hero-name").textContent = p.name;
+  $("#hero-price").textContent = money(p.half);
+  $("#showcase .disc").style.background = `radial-gradient(circle at 30% 30%, var(--surface), ${p.bg})`;
+  document.querySelectorAll("#picker button").forEach(b => b.setAttribute("aria-pressed", b.dataset.id === p.id));
+}
+const picker = $("#picker");
+cakes.forEach(p => {
+  const b = document.createElement("button");
+  b.type = "button"; b.dataset.id = p.id; b.style.background = p.c[0]; b.setAttribute("aria-label", p.name);
+  b.addEventListener("click", () => { showHero(p); clearInterval(heroTimer); });
+  picker.append(b);
+});
+let heroIdx = 4; showHero(cakes[heroIdx]);
+const heroTimer = setInterval(() => { heroIdx = (heroIdx + 1) % cakes.length; showHero(cakes[heroIdx]); }, 4200);
+
+$("#marquee").innerHTML = (["Eggless on request", "Free name on every cake", "Fresh puffs at 4 PM", "Free delivery over ₹500", "Theme cakes with 2 days' notice", "UPI, cash or card"].map(t => `<span>${t}</span>`).join("")).repeat(2);
+
+/* ---------- counter ---------- */
+const choice = {}; // id -> {size, eggless}
+let filter = "all";
+function priceOf(p, o = choice[p.id] || {}) {
+  if (p.cat !== "cake") return p.price;
+  return (o.size === "full" ? p.full : p.half) + (o.eggless ? 50 : 0);
+}
+function renderGrid() {
+  const grid = $("#grid");
+  const items = MENU.filter(p => filter === "all" || p.cat === filter);
+  grid.innerHTML = "";
+  items.forEach((p, i) => {
+    choice[p.id] ||= { size: "half", eggless: false };
+    const o = choice[p.id];
+    const card = document.createElement("article");
+    card.className = "card";
+    card.style.animationDelay = `${i * 50}ms`;
+    card.innerHTML = `
+      <div class="art" style="background:${p.bg}">${p.badge ? `<span class="badge" style="color:#2b1a15;background:#fff">${p.badge}</span>` : ""}${art(p)}</div>
+      <h3>${p.name}</h3>
+      <p class="desc">${p.desc}</p>
+      ${p.cat === "cake" ? `
+      <div class="row">
+        <div class="seg" role="group" aria-label="Size">
+          <button type="button" data-size="half" aria-pressed="${o.size === "half"}">½ kg</button>
+          <button type="button" data-size="full" aria-pressed="${o.size === "full"}">1 kg</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="egg-${p.id}" ${o.eggless ? "checked" : ""}> Eggless</label>
+      </div>` : ""}
+      <div class="row">
+        <span class="price-tag"><span class="amt">${money(priceOf(p))}</span> <small>${p.cat === "cake" ? "" : p.kind === "cookie" ? "per box" : "each"}</small></span>
+      </div>
+      <button class="btn add" type="button">Add to box</button>`;
+    const amt = card.querySelector(".amt");
+    const bumpPrice = () => { amt.textContent = money(priceOf(p)); amt.animate([{ transform: "translateY(-6px)", opacity: .3 }, { transform: "none", opacity: 1 }], { duration: 400, easing: "cubic-bezier(.34,1.56,.64,1)" }); };
+    card.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+      o.size = b.dataset.size;
+      card.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+      bumpPrice();
+    }));
+    const egg = card.querySelector(`#egg-${p.id}`);
+    if (egg) egg.addEventListener("change", () => { o.eggless = egg.checked; bumpPrice(); });
+    const add = card.querySelector(".add");
+    add.addEventListener("click", e => {
+      addToCart(p);
+      flyFrom(e.currentTarget);
+      add.classList.add("added"); add.textContent = "Added ✓";
+      setTimeout(() => { add.classList.remove("added"); add.textContent = "Add to box"; }, 1300);
+    });
+    // 3D tilt
+    card.addEventListener("pointermove", e => {
+      if (e.pointerType !== "mouse") return;
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+      card.style.setProperty("--ry", `${x * 8}deg`); card.style.setProperty("--rx", `${-y * 8}deg`);
+    });
+    card.addEventListener("pointerleave", () => { card.style.setProperty("--ry", "0deg"); card.style.setProperty("--rx", "0deg"); });
+    grid.append(card);
+  });
+  if (!items.length) grid.innerHTML = `<p class="empty">Nothing here right now.</p>`;
+}
+function movePill() {
+  const active = $('#filters button[aria-pressed="true"]');
+  const pill = $("#filters .pill");
+  pill.style.left = active.offsetLeft + "px"; pill.style.width = active.offsetWidth + "px";
+}
+$("#filters").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll("#filters button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  movePill(); renderGrid();
+});
+renderGrid();
+requestAnimationFrame(movePill);
+document.fonts?.ready.then(movePill);
+addEventListener("resize", movePill);
+
+/* ---------- cart ---------- */
+const cart = []; // {key, p, size, eggless, qty, unit}
+let ordered = false;
+function addToCart(p) {
+  const o = choice[p.id] || {};
+  const key = p.cat === "cake" ? `${p.id}-${o.size}-${o.eggless}` : p.id;
+  const found = cart.find(l => l.key === key);
+  if (found) found.qty++;
+  else cart.push({ key, p, size: o.size, eggless: o.eggless, qty: 1, unit: priceOf(p) });
+  ordered = false;
+  updateCount(); renderCart();
+}
+function updateCount() {
+  $("#cart-count").textContent = cart.reduce((s, l) => s + l.qty, 0);
+  const b = $("#open-cart"); b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump");
+}
+function flyFrom(el) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const a = el.getBoundingClientRect(), t = $("#open-cart").getBoundingClientRect();
+  const dot = document.createElement("div"); dot.className = "fly"; document.body.append(dot);
+  const sx = a.left + a.width / 2, sy = a.top + a.height / 2, ex = t.left + t.width - 20, ey = t.top + t.height / 2;
+  dot.animate([
+    { transform: `translate(${sx}px, ${sy}px) scale(1)` },
+    { transform: `translate(${(sx + ex) / 2}px, ${Math.min(sy, ey) - 120}px) scale(1.4)`, offset: .45 },
+    { transform: `translate(${ex}px, ${ey}px) scale(.4)`, opacity: .6 },
+  ], { duration: 750, easing: "cubic-bezier(.5,0,.3,1)" }).onfinish = () => dot.remove();
+}
+function totals() {
+  const sub = cart.reduce((s, l) => s + l.unit * l.qty, 0);
+  const delivery = sub === 0 || sub >= 500 ? 0 : 40;
+  return { sub, delivery };
+}
+function tomorrowISO() { const d = new Date(Date.now() + 864e5); return d.toISOString().slice(0, 10); }
+function renderCart() {
+  const body = $("#drawer-body");
+  if (ordered) {
+    body.innerHTML = `<div class="done">
+      <div class="tick"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+      <h2 style="font-size:1.8rem">Thank you, ${escapeHTML(ordered)}!</h2>
+      <p>This is a design preview, so no order was sent. In the live shop, the bakery would now confirm your order.</p>
+      <button class="btn" type="button" id="back-shop">Back to the counter</button></div>`;
+    $("#back-shop").addEventListener("click", closeCart);
+    return;
+  }
+  if (!cart.length) {
+    body.innerHTML = `<div class="done"><p style="font-size:1.1rem">Your box is empty.</p><p class="note">Pick something from today's counter to start an order.</p><button class="btn" type="button" id="back-shop">Browse the counter</button></div>`;
+    $("#back-shop").addEventListener("click", closeCart);
+    return;
+  }
+  const { sub, delivery } = totals();
+  const need = Math.max(0, 500 - sub);
+  body.innerHTML = `
+    <div class="lines">${cart.map((l, i) => `
+      <div class="line">
+        <div class="thumb" style="background:${l.p.bg}">${art(l.p)}</div>
+        <div class="meta"><b>${l.p.name}</b><small>${l.p.cat === "cake" ? `${l.size === "full" ? "1 kg" : "½ kg"}${l.eggless ? ", eggless" : ""} · ` : ""}${money(l.unit)}</small></div>
+        <div class="stepper"><button type="button" data-i="${i}" data-d="-1" aria-label="One less">−</button><span>${l.qty}</span><button type="button" data-i="${i}" data-d="1" aria-label="One more">+</button></div>
+      </div>`).join("")}
+    </div>
+    <div class="free-bar">${need ? `Add <b>${money(need)}</b> more for free delivery` : `You get <b>free delivery</b> within 3 km`}<div class="bar"><i id="bar"></i></div></div>
+    <div class="totals">
+      <div><span>Items</span><span>${money(sub)}</span></div>
+      <div><span>Delivery</span><span>${delivery ? money(delivery) : "Free"}</span></div>
+      <div class="grand"><span>Total</span><span>${money(sub + delivery)}</span></div>
+    </div>
+    <form class="checkout" id="checkout">
+      <div class="two">
+        <label>Your name<input id="f-name" required maxlength="40" autocomplete="name" placeholder="Asha"></label>
+        <label>Phone<input id="f-phone" required inputmode="tel" pattern="[0-9 +]{10,15}" autocomplete="tel" placeholder="98765 43210"></label>
+      </div>
+      <div class="two">
+        <label>Pickup or delivery<select id="f-mode"><option>Home delivery</option><option>Pickup at shop</option></select></label>
+        <label>Date<input id="f-date" type="date" min="${tomorrowISO()}" value="${tomorrowISO()}" required></label>
+      </div>
+      <button class="btn" type="submit">Place order · ${money(sub + delivery)}</button>
+      <p class="note">Design preview: placing an order here doesn't send anything.</p>
+    </form>`;
+  requestAnimationFrame(() => { const bar = $("#bar"); if (bar) bar.style.width = Math.min(100, sub / 5) + "%"; });
+  body.querySelectorAll(".stepper button").forEach(b => b.addEventListener("click", () => {
+    const l = cart[+b.dataset.i]; l.qty += +b.dataset.d;
+    if (l.qty <= 0) cart.splice(+b.dataset.i, 1);
+    updateCount(); renderCart();
+  }));
+  $("#checkout").addEventListener("submit", e => {
+    e.preventDefault();
+    ordered = $("#f-name").value.trim() || "friend";
+    cart.length = 0; updateCount(); renderCart();
+  });
+}
+function escapeHTML(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function openCart() { renderCart(); $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); setTimeout(() => $("#close-cart").focus(), 300); }
+function closeCart() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); if (ordered) { ordered = false; } }
+$("#open-cart").addEventListener("click", openCart);
+$("#close-cart").addEventListener("click", closeCart);
+$("#scrim").addEventListener("click", closeCart);
+addEventListener("keydown", e => { if (e.key === "Escape") closeCart(); });
+
+/* ---------- button effects: spotlight, ripple, magnetic CTA ---------- */
+document.addEventListener("pointermove", e => {
+  const b = e.target.closest?.(".btn"); if (!b) return;
+  const r = b.getBoundingClientRect();
+  b.style.setProperty("--mx", `${e.clientX - r.left}px`); b.style.setProperty("--my", `${e.clientY - r.top}px`);
+});
+document.addEventListener("pointerdown", e => {
+  const b = e.target.closest?.(".btn"); if (!b) return;
+  const r = b.getBoundingClientRect(), size = Math.max(r.width, r.height);
+  const s = document.createElement("span"); s.className = "ripple";
+  Object.assign(s.style, { width: size + "px", height: size + "px", left: e.clientX - r.left - size / 2 + "px", top: e.clientY - r.top - size / 2 + "px" });
+  b.append(s); setTimeout(() => s.remove(), 650);
+});
+const cta = $("#cta-shop");
+cta.addEventListener("pointermove", e => {
+  if (e.pointerType !== "mouse") return;
+  const r = cta.getBoundingClientRect();
+  cta.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .18}px, ${(e.clientY - r.top - r.height / 2) * .3}px)`;
+});
+cta.addEventListener("pointerleave", () => { cta.style.transform = ""; });
+
+/* ---------- toast + copy ---------- */
+let toastT;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200); }
+$("#copy-phone").addEventListener("click", () => {
+  const num = $("#phone").textContent;
+  navigator.clipboard?.writeText(num).then(() => toast("Phone number copied"), () => {
+    const r = document.createRange(); r.selectNodeContents($("#phone")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Number selected. Press copy.");
+  });
+});
+</script>
