@@ -45,7 +45,7 @@ Owner page ────► app.py (password needed) ──► database.py
 | `app.py` | The web server: pages, customer API, owner API and sign-in. |
 | `database.py` | Items, orders, offers and shop details, saved in `shop.db` (SQLite, built into Python). |
 | `brain.py` | The AI assistant. Gets the live menu every message and places real orders. |
-| `static/` | The two pages: HTML, CSS and JavaScript, plus the fonts. |
+| `static/` | The two pages: HTML, CSS and JavaScript, plus the fonts. `motion.js` adds the shop page's greeting, animations and button effects; it never touches prices, the cart or orders. |
 | `test_shop.py`, `test_bot.py` | 53 automatic tests. No keys or internet needed. |
 | `try_in_terminal.py` | Chat with the assistant in the terminal. |
 | `platforms.py`, `connect_instagram.py`, `fake_whatsapp_message.py` | WhatsApp and Instagram (paused, see the end). |

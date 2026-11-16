@@ -44,6 +44,7 @@
       cleanCart();
       renderCounter();
       renderCart();
+      document.dispatchEvent(new CustomEvent("shop:loaded", { detail: data }));   // motion.js decorates the page
     } catch (error) {
       if (!state.products.length) $("shelf").replaceChildren(h("p", { class: "notice" }, error.message));
     }
@@ -122,7 +123,14 @@
     $("categories").replaceChildren(...categories.map((name) =>
       h("button", { class: "chip", type: "button", "aria-pressed": String(name === state.category),
         dataset: { focus: `cat-${name}` },
-        onclick: () => { state.category = name; renderCounter(); } }, name)));
+        onclick: () => {
+          state.category = name;
+          if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            document.startViewTransition(renderCounter);          // a smooth cross-fade between categories
+          } else {
+            renderCounter();
+          }
+        } }, name)));
   }
 
   function renderShelf() {
@@ -259,11 +267,26 @@
     if (focusKey?.startsWith("cart-")) document.querySelector(`[data-focus="${focusKey}"]`)?.focus();
 
     $("address-field").hidden = !delivery;
+    renderFreeMeter(subtotal, delivery);
     const rows = [h("dt", {}, "Items"), h("dd", {}, money(subtotal))];
     if (delivery) rows.push(h("dt", {}, "Delivery"), h("dd", {}, fee ? money(fee) : "Free"));
     rows.push(h("dt", { class: "grand" }, "Total"), h("dd", { class: "grand" }, money(total)));
     $("totals").replaceChildren(...rows);
     $("place-order").textContent = `Place order, ${money(total)}`;
+  }
+
+  /* "Add ₹60 more for free delivery", with a bar that fills up. Only shown for home delivery. */
+  function renderFreeMeter(subtotal, delivery) {
+    const s = state.shop;
+    const show = delivery && s.delivery_fee > 0 && s.free_delivery_above > 0;
+    $("free-meter").hidden = !show;
+    if (!show) return;
+    const need = s.free_delivery_above - subtotal;
+    $("free-text").textContent = need > 0
+      ? `Add ${money(need)} more for free delivery.`
+      : "Your order gets free delivery.";
+    $("free-meter").classList.toggle("reached", need <= 0);
+    $("free-bar").style.setProperty("--fill", `${Math.min(100, Math.round((subtotal / s.free_delivery_above) * 100))}%`);
   }
 
   // ---------------- order sheet (open, close, checkout) ----------------
