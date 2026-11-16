@@ -6,14 +6,14 @@
   <meta name="robots" content="noindex">
   <title>Owner desk</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/base.css?v=1">
-  <link rel="stylesheet" href="/static/owner.css?v=1">
-  <script src="/static/common.js?v=1" defer></script>
-  <script src="/static/owner.js?v=1" defer></script>
+  <link rel="stylesheet" href="/static/base.css?v=2">
+  <link rel="stylesheet" href="/static/owner.css?v=2">
+  <script src="/static/common.js?v=2" defer></script>
+  <script src="/static/owner.js?v=2" defer></script>
 </head>
 <body>
   <header class="desk-top">
-    <span class="desk-brand"><span aria-hidden="true">🧁</span> <span id="desk-shop-name">Owner desk</span></span>
+    <span class="desk-brand"><span aria-hidden="true" id="desk-emoji">🛍️</span> <span id="desk-shop-name">Owner desk</span></span>
     <nav class="desk-links">
       <a href="/" target="_blank" rel="noopener">View shop</a>
       <button class="button button-quiet button-small" id="sign-out" type="button" hidden>Sign out</button>
@@ -40,6 +40,8 @@
     <div class="tabs" role="tablist" aria-label="Owner sections">
       <button role="tab" id="tab-orders" aria-controls="panel-orders" aria-selected="true" type="button">Orders <span class="badge" id="new-badge" hidden></span></button>
       <button role="tab" id="tab-items" aria-controls="panel-items" aria-selected="false" type="button" tabindex="-1">Items</button>
+      <button role="tab" id="tab-stock" aria-controls="panel-stock" aria-selected="false" type="button" tabindex="-1">Stock <span class="badge badge-soft" id="stock-badge" hidden></span></button>
+      <button role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false" type="button" tabindex="-1">Earnings</button>
       <button role="tab" id="tab-shop" aria-controls="panel-shop" aria-selected="false" type="button" tabindex="-1">Shop details</button>
     </div>
 
@@ -50,6 +52,10 @@
           <button type="button" data-view="completed" aria-pressed="false">Completed</button>
           <button type="button" data-view="cancelled" aria-pressed="false">Cancelled</button>
         </div>
+        <label class="order-search">
+          <span class="visually-hidden">Find an order</span>
+          <input type="search" id="order-search" class="input" maxlength="60" autocomplete="off" placeholder="Find an order: name, phone or number">
+        </label>
         <button class="button button-quiet button-small" id="sound-toggle" type="button" aria-pressed="false">Turn on new-order sound</button>
       </div>
       <div id="orders-view"></div>
@@ -83,6 +89,30 @@
       <div id="items-list" class="items-list"></div>
     </section>
 
+    <section id="panel-stock" role="tabpanel" aria-labelledby="tab-stock" hidden>
+      <div class="panel-bar">
+        <p class="panel-help" id="stock-summary">Loading stock</p>
+        <p class="panel-help">The + buttons add to the stock and never undo sales made meanwhile.</p>
+      </div>
+      <div id="stock-list" class="stock-list"></div>
+      <h2 class="section-title">Recent stock changes</h2>
+      <ol id="stock-moves" class="moves"></ol>
+    </section>
+
+    <section id="panel-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+      <div class="panel-bar">
+        <div class="segmented period-picker" role="group" aria-label="Which days">
+          <button type="button" data-period="today" aria-pressed="false">Today</button>
+          <button type="button" data-period="7d" aria-pressed="true">7 days</button>
+          <button type="button" data-period="30d" aria-pressed="false">30 days</button>
+          <button type="button" data-period="month" aria-pressed="false">This month</button>
+          <button type="button" data-period="all" aria-pressed="false">All time</button>
+        </div>
+        <a class="button button-quiet button-small" id="csv-link" href="/api/owner/orders.csv?period=7d" download>Download these orders (spreadsheet)</a>
+      </div>
+      <div id="report-view" class="report-view"><p class="panel-help">Loading earnings</p></div>
+    </section>
+
     <section id="panel-shop" role="tabpanel" aria-labelledby="tab-shop" hidden>
       <form id="shop-form" class="shop-form">
         <div class="shop-grid">
@@ -99,6 +129,20 @@
           <label class="field"><span>Delivery fee (₹)</span><input name="delivery_fee" type="number" min="0" step="1" required></label>
           <label class="field"><span>Free delivery from (₹)</span><input name="free_delivery_above" type="number" min="0" step="1" required></label>
           <label class="field wide"><span>Delivery area and times</span><input name="delivery_area" maxlength="200"></label>
+          <label class="field"><span>Shop icon (one emoji)</span><input name="shop_emoji" maxlength="16" autocomplete="off"></label>
+          <div class="field">
+            <span>Or pick one</span>
+            <div class="emoji-row emoji-choices" id="shop-emoji-row"></div>
+          </div>
+          <fieldset class="field wide">
+            <legend>Quick questions on the shop page (up to 3)</legend>
+            <div class="question-list">
+              <input class="input" name="quick_question" maxlength="80" aria-label="Quick question 1" placeholder="For example: What's on offer today?">
+              <input class="input" name="quick_question" maxlength="80" aria-label="Quick question 2">
+              <input class="input" name="quick_question" maxlength="80" aria-label="Quick question 3">
+            </div>
+          </fieldset>
+          <label class="field wide"><span>Hint in the order notes box</span><input name="notes_hint" maxlength="80" placeholder="For example: Size, colour, or a message for the gift"></label>
           <label class="field wide"><span>Notes for the AI assistant</span>
             <textarea name="assistant_notes" maxlength="1500" rows="5" placeholder="Anything customers often ask: eggless, custom cakes, payment, parking"></textarea>
           </label>

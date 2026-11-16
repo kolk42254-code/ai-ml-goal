@@ -15,6 +15,7 @@ import uuid
 from collections import deque
 from datetime import timedelta
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -112,7 +113,7 @@ def health():
 
 def public_shop(settings):
     keys = ("shop_name", "tagline", "phone", "address", "open_time", "close_time", "closed_days",
-            "delivery_fee", "free_delivery_above", "delivery_area")
+            "delivery_fee", "free_delivery_above", "delivery_area", "shop_emoji", "quick_questions", "notes_hint")
     return {key: settings[key] for key in keys}
 
 
@@ -151,6 +152,55 @@ def create_order(data: OrderIn, request: Request):
     except database.OrderError as problem:
         raise HTTPException(400, str(problem)) from None
     return {"order": order}
+
+
+Token = Annotated[str, Field(pattern=rf"^{database.TOKEN_PATTERN}$")]
+
+
+class MyOrdersIn(BaseModel):
+    tokens: list[Token] = Field(max_length=50)
+
+
+class CancelIn(BaseModel):
+    token: Token
+
+
+class TrackIn(BaseModel):
+    order_id: int = Field(ge=1, le=999_999_999)
+    phone: str = Field(max_length=20)
+
+
+@app.post("/api/my-orders")
+def my_orders(data: MyOrdersIn, request: Request):
+    """The customer's own orders, with live status. Only the browser that has an order's secret code can see it."""
+    if not allowed(f"mine:{client_ip(request)}", 120, 300):
+        raise HTTPException(429, "Too many requests from this device. Please wait a minute.")
+    return {"orders": database.customer_orders(data.tokens),
+            "server_now": database.now().isoformat(timespec="seconds")}
+
+
+@app.post("/api/my-orders/cancel")
+def cancel_my_order(data: CancelIn, request: Request):
+    """The customer cancels their own order, while the shop hasn't confirmed it yet."""
+    if not allowed(f"cancel:{client_ip(request)}", 10, 600):
+        raise HTTPException(429, "Too many tries from this device. Please call the shop.")
+    try:
+        return {"order": database.customer_cancel(data.token)}
+    except KeyError:
+        raise HTTPException(404, "We couldn't find that order. Please call the shop.") from None
+    except database.OrderError as problem:
+        raise HTTPException(400, str(problem)) from None
+
+
+@app.post("/api/track")
+def track_order(data: TrackIn, request: Request):
+    """Find an order with its number and phone number (ordered on another phone, or through WhatsApp)."""
+    if not allowed(f"track:{client_ip(request)}", 10, 600):
+        raise HTTPException(429, "Too many tries. Please wait 10 minutes, or call the shop.")
+    try:
+        return {"order": database.track_order(data.order_id, data.phone)}
+    except LookupError as problem:
+        raise HTTPException(404, str(problem)) from None
 
 
 class ChatIn(BaseModel):
@@ -248,6 +298,38 @@ def owner_orders():
             "server_now": at.isoformat(timespec="seconds")}
 
 
+@app.get("/api/owner/orders/search", dependencies=owner_only)
+def owner_search_orders(q: str = ""):
+    return {"orders": database.search_orders(q[:200])}
+
+
+def check_period(period):
+    if period not in database.PERIODS:
+        raise HTTPException(400, "Choose today, 7 days, 30 days, this month or all time.")
+
+
+@app.get("/api/owner/report", dependencies=owner_only)
+def owner_report(period: str = "7d"):
+    check_period(period)
+    at = database.now()
+    return {"report": database.sales_report(period, at), "server_now": at.isoformat(timespec="seconds")}
+
+
+@app.get("/api/owner/orders.csv", dependencies=owner_only)
+def owner_orders_csv(period: str = "30d"):
+    check_period(period)
+    at = database.now()
+    return Response(database.orders_csv(period, at), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="orders-{period}-{at:%Y-%m-%d}.csv"',
+                             "Cache-Control": "no-store"})
+
+
+@app.get("/api/owner/stock", dependencies=owner_only)
+def owner_stock():
+    at = database.now()
+    return {**database.stock_report(at), "server_now": at.isoformat(timespec="seconds")}
+
+
 class StatusIn(BaseModel):
     status: str = Field(max_length=20)
 
@@ -305,6 +387,29 @@ def owner_edit_product(product_id: int, data: ProductPatch):
         raise not_found() from None
     except ValueError as problem:
         raise HTTPException(400, str(problem)) from None
+
+
+class StockChangeIn(BaseModel):
+    change: int = Field(ge=-100_000, le=100_000)
+
+
+@app.post("/api/owner/products/{product_id}/stock", dependencies=owner_only)
+def owner_change_stock(product_id: int, data: StockChangeIn):
+    """Add to or take from the stock (the + and − buttons). Safe even if customers bought some meanwhile."""
+    try:
+        return {"product": database.change_stock(product_id, data.change)}
+    except KeyError:
+        raise not_found() from None
+    except ValueError as problem:
+        raise HTTPException(400, str(problem)) from None
+
+
+@app.get("/api/owner/products/{product_id}/stock-history", dependencies=owner_only)
+def owner_stock_history(product_id: int):
+    try:
+        return {"moves": database.stock_history(product_id), "server_now": database.now().isoformat(timespec="seconds")}
+    except KeyError:
+        raise not_found() from None
 
 
 @app.delete("/api/owner/products/{product_id}", dependencies=owner_only)
@@ -397,6 +502,9 @@ class SettingsIn(BaseModel):
     free_delivery_above: int | None = None
     delivery_area: str | None = Field(default=None, max_length=200)
     assistant_notes: str | None = Field(default=None, max_length=1500)
+    shop_emoji: str | None = Field(default=None, max_length=16)
+    quick_questions: list[Annotated[str, Field(max_length=80)]] | None = Field(default=None, max_length=3)
+    notes_hint: str | None = Field(default=None, max_length=80)
 
 
 @app.get("/api/owner/settings", dependencies=owner_only)
