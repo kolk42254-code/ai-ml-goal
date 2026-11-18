@@ -97,8 +97,8 @@ No code changes are needed. (`shop_info.txt` and `orders.csv` are from the first
 ## Before real customers use it
 
 - **Gemini paid tier:** on the free tier, Google may use the chats to improve its products. Real customers' chats should use the paid tier.
-- **Always on:** your laptop and ngrok must stay on. A real shop needs the server on a cloud host.
-- **Backups:** `shop.db` holds every order. Copy it somewhere safe regularly.
+- **Always on:** your laptop and ngrok must stay on. A real shop needs the server on a cloud host. **[deploy/DEPLOY.md](deploy/DEPLOY.md)** is the step-by-step guide: domain, server, HTTPS, nightly backups and handover.
+- **Backups:** `shop.db` holds every order. `python backup.py` makes a safe copy with the photos (the deploy guide runs it every night).
 - **Payments:** customers pay at pickup or delivery. Online payment (UPI) would need a payment company like Razorpay.
 - **Privacy:** `shop.db` has customers' names and phone numbers. `.gitignore` keeps it off GitHub. Keep it that way.
 

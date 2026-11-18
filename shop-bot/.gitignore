@@ -10,3 +10,5 @@ uploads/
 venv/
 __pycache__/
 .pytest_cache/
+# backups hold customer data: keep them off GitHub
+backups/

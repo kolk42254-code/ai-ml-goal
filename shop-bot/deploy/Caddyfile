@@ -1,0 +1,15 @@
+# Caddy: the front door of the shop. It gets and renews the HTTPS certificate by itself (free, Let's Encrypt).
+# Install (as root):  cp /home/shop/shop-bot/deploy/Caddyfile /etc/caddy/Caddyfile
+#                     nano /etc/caddy/Caddyfile     <- change example.in to the shop's domain (3 places)
+#                     systemctl reload caddy
+# The domain's DNS must already point to this server, or the certificate can't be issued.
+
+www.example.in {
+	redir https://example.in{uri} permanent
+}
+
+example.in {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy 127.0.0.1:8000
+}

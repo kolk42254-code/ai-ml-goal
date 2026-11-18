@@ -1,0 +1,24 @@
+# Keeps the shop running: starts it when the server boots and restarts it if it ever stops.
+# Install (as root):  cp /home/shop/shop-bot/deploy/shop.service /etc/systemd/system/shop.service
+#                     systemctl daemon-reload && systemctl enable --now shop
+# The shop listens only on 127.0.0.1:8000. Caddy (see Caddyfile) is the front door with HTTPS.
+# Keep ONE process: the order safety (no two customers buying the last item) and the owner sign-in live in it.
+
+[Unit]
+Description=Shop website
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=shop
+Group=shop
+WorkingDirectory=/home/shop/shop-bot
+ExecStart=/home/shop/shop-bot/venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

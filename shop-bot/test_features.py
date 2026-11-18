@@ -300,3 +300,23 @@ def test_old_shop_database_is_upgraded_without_losing_orders(tmp_path, monkeypat
     database.update_order_status(old["id"], "cancelled")
     assert database.get_product(1)["stock"] == 5
     assert database.sales_report("all")["summary"]["cancelled_orders"] == 1
+
+
+# ---------- nightly backup ----------
+
+def test_backup_has_orders_and_photos_and_keeps_only_the_newest(owner, tmp_path):
+    import zipfile
+
+    import backup
+
+    placed = order(owner, [(1, 1)]).json()["order"]
+    (config.UPLOADS_DIR / "cake.jpg").write_bytes(b"\xff\xd8\xff photo")
+    made = [backup.make_backup(tmp_path / "backups", keep=2) for _ in range(3)]
+    left = sorted((tmp_path / "backups").glob("shop-backup-*.zip"))
+    assert left == made[1:]                                   # the oldest one was removed
+    with zipfile.ZipFile(made[-1]) as archive:
+        assert set(archive.namelist()) == {"shop.db", "uploads/cake.jpg"}
+        archive.extract("shop.db", tmp_path / "restore")
+    with closing(sqlite3.connect(tmp_path / "restore" / "shop.db")) as copy:
+        assert copy.execute("SELECT customer_name FROM orders WHERE id = ?", (placed["id"],)).fetchone() == ("Asha",)
+    assert oct(made[-1].stat().st_mode & 0o777) == "0o600"   # only the shop's user can read it
