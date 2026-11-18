@@ -1280,3 +1280,25 @@ body.locked { overflow: hidden; }
 }
 #receipt { display: grid; gap: 10px; }
 .follow-chip { justify-self: start; margin-top: 8px; }
+
+/* ---------- veg / non-veg mark (FSSAI style: green dot in a square, brown triangle in a square) ---------- */
+
+.dish-name { display: flex; align-items: flex-start; gap: .45rem; }
+.diet {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 15px; height: 15px;
+  margin-top: .22em;
+  border: 1.5px solid;
+  border-radius: 3px;
+  background: var(--white);
+}
+.diet::after { content: ""; }
+.diet-veg { border-color: #1a8f3c; }
+.diet-veg::after { width: 7px; height: 7px; border-radius: 50%; background: #1a8f3c; }
+.diet-nonveg { border-color: #8a3b12; }
+.diet-nonveg::after { width: 8px; height: 7px; background: #8a3b12; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.veg-chip { display: inline-flex; align-items: center; gap: .45rem; }
+.veg-chip .diet { margin-top: 0; }
+.veg-chip[aria-pressed="true"] { background: #1a8f3c; border-color: #1a8f3c; color: var(--white); }

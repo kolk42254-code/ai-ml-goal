@@ -350,6 +350,10 @@
               h("button", { type: "button", "aria-label": `One more ${p.name} in stock`, dataset: { focus: `plus-${p.id}` },
                 onclick: () => changeStock(p, 1) }, "+")),
             low ? h("span", { class: "stock-low" }, low) : null),
+          h("label", { class: "diet-pick" }, h("span", { class: "visually-hidden" }, `Veg or non-veg: ${p.name}`),
+            h("select", { dataset: { focus: `diet-${p.id}` }, onchange: (e) => save(p, { diet: e.target.value }, "Saved") },
+              [["", "Veg / non-veg: not set"], ["veg", "🟢 Veg"], ["nonveg", "🔺 Non-veg"]].map(([value, label]) =>
+                h("option", { value, selected: p.diet === value }, label)))),
           h("label", { class: "switch" },
             h("input", { type: "checkbox", checked: p.visible, dataset: { focus: `show-${p.id}` },
               onchange: (e) => save(p, { visible: e.target.checked }, e.target.checked ? "Now showing in the shop" : "Hidden from the shop") }),
@@ -498,7 +502,8 @@
       try {
         const { product } = await ownerApi("/api/owner/products", { method: "POST", body: {
           name: value("name"), category: value("category"), description: value("description"),
-          emoji: form.elements.emoji.value, price: Number(value("price")), stock: Number(value("stock") || 0) } });
+          emoji: form.elements.emoji.value, price: Number(value("price")), stock: Number(value("stock") || 0),
+          diet: form.elements.diet.value } });
         state.products = [...state.products, product];
         renderItems();
         form.reset();

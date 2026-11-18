@@ -293,6 +293,7 @@ def test_old_shop_database_is_upgraded_without_losing_orders(tmp_path, monkeypat
     conn.close()
 
     monkeypatch.setattr(config, "DATABASE_FILE", old_file)
+    assert database.get_product(1)["diet"] == ""                       # old items get the new veg/non-veg field
     [old] = database.list_orders()
     assert old["customer_name"] == "Asha" and old["cancelled_by"] == ""
     found = database.track_order(old["id"], "9876543210")              # old orders get a tracking code when found
@@ -320,3 +321,18 @@ def test_backup_has_orders_and_photos_and_keeps_only_the_newest(owner, tmp_path)
     with closing(sqlite3.connect(tmp_path / "restore" / "shop.db")) as copy:
         assert copy.execute("SELECT customer_name FROM orders WHERE id = ?", (placed["id"],)).fetchone() == ("Asha",)
     assert oct(made[-1].stat().st_mode & 0o777) == "0o600"   # only the shop's user can read it
+
+
+# ---------- veg / non-veg (dhabas and restaurants) ----------
+
+def test_veg_and_non_veg_marks_reach_the_shop_and_the_ai(owner):
+    owner.patch("/api/owner/products/9", json={"diet": "veg"})
+    new_id = owner.post("/api/owner/products", json={"name": "Chicken Curry", "category": "Curries", "price": 220,
+                                                     "stock": 20, "diet": "nonveg"}).json()["product"]["id"]
+    assert product(owner, 9)["diet"] == "veg" and product(owner, new_id)["diet"] == "nonveg"
+    assert product(owner, 1)["diet"] == ""                           # not set until the owner chooses
+    menu = database.menu_text()
+    assert "#9 Veg Puff (VEG) [" in menu and f"#{new_id} Chicken Curry (NON-VEG) [" in menu
+    assert owner.patch("/api/owner/products/9", json={"diet": "vegan"}).status_code == 422
+    owner.patch("/api/owner/products/9", json={"diet": ""})
+    assert product(owner, 9)["diet"] == ""

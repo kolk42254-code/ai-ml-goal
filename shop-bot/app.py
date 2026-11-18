@@ -359,6 +359,7 @@ class ProductIn(BaseModel):
     price: int
     stock: int = 0
     visible: bool = True
+    diet: str = Field(default="", pattern=r"^(veg|nonveg|)$")
 
 
 class ProductPatch(BaseModel):
@@ -369,6 +370,7 @@ class ProductPatch(BaseModel):
     price: int | None = None
     stock: int | None = None
     visible: bool | None = None
+    diet: str | None = Field(default=None, pattern=r"^(veg|nonveg|)$")
 
 
 @app.post("/api/owner/products", dependencies=owner_only)

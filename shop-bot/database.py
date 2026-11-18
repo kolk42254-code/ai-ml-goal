@@ -23,6 +23,7 @@ MAX_QUANTITY = 50          # the most of one item in a single order
 LOW_STOCK = 3              # at or below this, the shop shows "Only 3 left"
 TOKEN_PATTERN = r"[A-Za-z0-9_-]{16,64}"          # the secret code that lets a customer follow their own order
 OWNER_MERGE = timedelta(minutes=3)               # owner stock clicks this close together count as one change
+DIETS = ("", "veg", "nonveg")                    # the green / brown food mark ("" = not a food item, or not set)
 PERIODS = {"today": "Today", "7d": "Last 7 days", "30d": "Last 30 days", "month": "This month", "all": "All time"}
 
 _lock = threading.RLock()  # one change at a time, so two customers can't buy the same last cake
@@ -100,7 +101,8 @@ def _create_tables(conn):
             offer_price INTEGER,
             offer_ends_at TEXT,
             stock INTEGER NOT NULL DEFAULT 0,
-            visible INTEGER NOT NULL DEFAULT 1
+            visible INTEGER NOT NULL DEFAULT 1,
+            diet TEXT NOT NULL DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,6 +166,8 @@ def _upgrade(conn):
     for name, kind in NEW_ORDER_COLUMNS.items():
         if name not in have:
             conn.execute(f"ALTER TABLE orders ADD COLUMN {name} {kind}")
+    if "diet" not in {row["name"] for row in conn.execute("PRAGMA table_info(products)")}:
+        conn.execute("ALTER TABLE products ADD COLUMN diet TEXT NOT NULL DEFAULT ''")   # "veg", "nonveg" or not set
     conn.executescript("""
         CREATE UNIQUE INDEX IF NOT EXISTS orders_by_token ON orders (track_token) WHERE track_token IS NOT NULL;
         CREATE INDEX IF NOT EXISTS orders_by_time ON orders (created_at);
@@ -353,7 +357,7 @@ def _product_view(row, at):
         "offer_price": row["offer_price"] if offer_on else None,
         "offer_ends_at": row["offer_ends_at"] if offer_on else None,
         "current_price": row["offer_price"] if offer_on else row["price"],
-        "stock": row["stock"], "visible": bool(row["visible"]),
+        "stock": row["stock"], "visible": bool(row["visible"]), "diet": row["diet"],
     }
 
 
@@ -393,6 +397,10 @@ def _check_product_fields(fields):
         checked["stock"] = int(fields["stock"])
     if "visible" in fields:
         checked["visible"] = 1 if fields["visible"] else 0
+    if "diet" in fields:
+        if fields["diet"] not in DIETS:
+            raise ValueError("Choose veg, non-veg, or not set.")
+        checked["diet"] = fields["diet"]
     return checked
 
 
@@ -507,7 +515,8 @@ def menu_text(at=None):
         else:
             price = f"₹{rupees(p['price'])}"
         stock = "OUT OF STOCK" if p["stock"] == 0 else f"{p['stock']} left"
-        lines.append(f"#{p['id']} {p['name']} [{p['category']}]: {price}; {stock}. {p['description']}")
+        diet = {"veg": " (VEG)", "nonveg": " (NON-VEG)"}.get(p["diet"], "")
+        lines.append(f"#{p['id']} {p['name']}{diet} [{p['category']}]: {price}; {stock}. {p['description']}")
     return "\n".join(lines) or "(The menu is empty right now.)"
 
 

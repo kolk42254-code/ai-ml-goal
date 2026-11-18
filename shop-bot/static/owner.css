@@ -507,3 +507,11 @@ fieldset.field legend { font-weight: 600; font-size: var(--step--1); color: var(
 .emoji-choice:hover { border-color: var(--raspberry); background: #fdf0f4; }
 .question-list { display: grid; gap: 8px; }
 .shop-grid .field { align-content: start; }     /* a short box next to a tall one keeps its own height */
+.diet-pick select, .add-grid select {
+  min-height: 40px;
+  padding: 0 .6rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--white);
+}
+.add-grid select { min-height: 44px; }

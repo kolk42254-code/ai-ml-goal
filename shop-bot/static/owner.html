@@ -6,10 +6,10 @@
   <meta name="robots" content="noindex">
   <title>Owner desk</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/base.css?v=2">
-  <link rel="stylesheet" href="/static/owner.css?v=2">
-  <script src="/static/common.js?v=2" defer></script>
-  <script src="/static/owner.js?v=2" defer></script>
+  <link rel="stylesheet" href="/static/base.css?v=3">
+  <link rel="stylesheet" href="/static/owner.css?v=3">
+  <script src="/static/common.js?v=3" defer></script>
+  <script src="/static/owner.js?v=3" defer></script>
 </head>
 <body>
   <header class="desk-top">
@@ -74,6 +74,9 @@
           <label class="field wide"><span>Short description</span><input name="description" maxlength="160" placeholder="For example: 1 kg, eggless on request"></label>
           <label class="field"><span>Price (₹)</span><input name="price" type="number" min="1" step="1" required></label>
           <label class="field"><span>Stock</span><input name="stock" type="number" min="0" step="1" value="10" required></label>
+          <label class="field"><span>Veg or non-veg</span>
+            <select name="diet"><option value="">Not set (not food)</option><option value="veg">🟢 Veg</option><option value="nonveg">🔺 Non-veg</option></select>
+          </label>
           <fieldset class="field wide emoji-pick">
             <legend>Picture (until you add a photo)</legend>
             <div class="emoji-row" id="emoji-row"></div>

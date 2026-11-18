@@ -23,6 +23,7 @@
     chatLog: store.get("sc-chat-log", []),
     sending: false,
     reloadSoon: false,
+    vegOnly: store.get("sc-veg-only", false) === true,
     mine: savedOrders(store.get("sc-orders", [])),   // this browser's orders (only their secret codes)
     views: [],                                 // those orders as the shop sees them right now
     loadingMine: false,
@@ -144,6 +145,15 @@
         disabled: qty >= p.stock, onclick: () => changeQty(p.id, 1) }, "+"));
   }
 
+  /* The Indian food mark: green dot = veg, brown triangle = non-veg. */
+  function dietMark(p) {
+    if (p.diet !== "veg" && p.diet !== "nonveg") return null;
+    const name = p.diet === "veg" ? "Veg" : "Non-veg";
+    return h("span", { class: `diet diet-${p.diet}`, role: "img", "aria-label": name, title: name });
+  }
+
+  const dishName = (tag, p) => h(tag, { class: "dish-name" }, dietMark(p), h("span", {}, p.name));
+
   function renderOffers() {
     const offers = state.products.filter((p) => p.offer_price !== null && p.stock > 0);
     $("offers").hidden = offers.length === 0;
@@ -151,7 +161,7 @@
       h("article", { class: "offer" },
         plate(p),
         h("div", {},
-          h("h3", {}, p.name),
+          dishName("h3", p),
           priceTag(p),
           h("p", { class: "timer", dataset: { ends: p.offer_ends_at } }),
           h("div", { class: "row-end" }, buyControl(p, "offer"))))));
@@ -160,7 +170,7 @@
   function renderCategories() {
     const categories = ["All", ...new Set(state.products.map((p) => p.category))];
     if (!categories.includes(state.category)) state.category = "All";
-    $("categories").replaceChildren(...categories.map((name) =>
+    const chips = categories.map((name) =>
       h("button", { class: "chip", type: "button", "aria-pressed": String(name === state.category),
         dataset: { focus: `cat-${name}` },
         onclick: () => {
@@ -170,17 +180,27 @@
           } else {
             renderCounter();
           }
-        } }, name)));
+        } }, name));
+    if (state.products.some((p) => p.diet === "veg") && state.products.some((p) => p.diet === "nonveg")) {
+      chips.unshift(h("button", { class: "chip veg-chip", type: "button", "aria-pressed": String(state.vegOnly),
+        dataset: { focus: "veg-only" },
+        onclick: () => { state.vegOnly = !state.vegOnly; store.set("sc-veg-only", state.vegOnly); renderCounter(); } },
+      h("span", { class: "diet diet-veg", "aria-hidden": "true" }), "Veg only"));
+    }
+    $("categories").replaceChildren(...chips);
   }
 
   function renderShelf() {
     const words = state.search.trim().toLowerCase();
+    const vegOnly = state.vegOnly && state.products.some((p) => p.diet === "nonveg");
     const shown = state.products.filter((p) =>
+      (!vegOnly || p.diet === "veg") &&
       (state.category === "All" || p.category === state.category) &&
       (!words || `${p.name} ${p.description} ${p.category}`.toLowerCase().includes(words)));
     if (!shown.length) {
       $("shelf").replaceChildren(h("p", { class: "empty-shelf" }, state.products.length
-        ? `Nothing on the counter matches "${state.search.trim()}". Try another word, or ask the assistant.`
+        ? (state.search.trim() ? `Nothing on the counter matches "${state.search.trim()}". Try another word, or ask the assistant.`
+          : "No veg items in this category. Tap \"Veg only\" again to see everything.")
         : "The counter is empty right now. Please check back soon."));
       return;
     }
@@ -199,7 +219,7 @@
     return h("article", { class: "item" + (soldOut ? " sold-out" : "") },
       plate(p),
       h("div", {},
-        h("h4", {}, p.name),
+        dishName("h4", p),
         p.description ? h("p", { class: "desc" }, p.description) : null,
         note),
       h("div", { class: "item-foot" },
