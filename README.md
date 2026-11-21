@@ -18,6 +18,7 @@ My journey learning **Python, AI and Machine Learning**: practice programs, smal
 |---|---|
 | [Eye_animation](Projects_by_AI/Eye_animation) | Eye animations with a menu (`Eye_animation.py`): eye with heart, eye blinking, and eye-to-space ASCII art |
 | [wizard-chess-3d](Projects_by_AI/wizard-chess-3d) | Wizard Chess 3D: a 3D chess game in the browser with a computer opponent (made in Google AI Studio) |
+| [cube-puzzle](Projects_by_AI/cube-puzzle) | Big Cube Lab: a 3D twisty-cube puzzle (3×3 up to 7×7) in the browser, with scramble, timer, best times and Ao5 |
 | [shop-bot-old](Projects_by_AI/shop-bot-old) | An older version of the shop bot, kept for reference |
 
 ## How to run
@@ -39,3 +40,5 @@ python Projects_by_AI/Eye_animation/Eye_animation.py
 Shop website: follow [shop-bot/README.md](shop-bot/README.md).
 
 Wizard Chess 3D: follow [its README](Projects_by_AI/wizard-chess-3d/README.md) (it needs Node.js).
+
+Big Cube Lab: open `Projects_by_AI/cube-puzzle/index.html` in a browser (it needs an internet connection to load the 3D library).
