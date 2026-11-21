@@ -1,0 +1,1759 @@
+<title>Big Cube Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Martian+Mono:wght@400;600;800&display=swap">
+<style>
+:root{
+  /* Layout: the cube sits on a dotted practice mat that fills the room; a rail with the clock and four tabs runs beside it on wide screens and stacks above and below it on phones. */
+  --bg:#E4E8EF;
+  --rail:#F5F6F9;
+  --ink:#121620;
+  --muted:#596173;
+  --line:#CDD3DE;
+  --accent:#2A4ED6;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#DCE3FB;
+  --mat:#D3D9E4;
+  --mat-edge:rgba(36,48,78,.16);
+  --dot:rgba(36,48,78,.15);
+  --chip:rgba(250,251,253,.88);
+  --shadow:0 12px 32px rgba(20,28,48,.18);
+  --good:#0F7C47;
+  --dnf:#AE430C;
+  --font-display:"Martian Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-ui:"Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1016; --rail:#141820; --ink:#E5E8EF; --muted:#8E97A9; --line:#252C3A;
+    --accent:#8199FF; --accent-ink:#0A0E1B; --accent-soft:#1F2846;
+    --mat:#191E29; --mat-edge:rgba(0,0,0,.5); --dot:rgba(190,205,240,.08);
+    --chip:rgba(20,24,32,.88); --shadow:0 12px 32px rgba(0,0,0,.5);
+    --good:#4FCB8B; --dnf:#F0915A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1016; --rail:#141820; --ink:#E5E8EF; --muted:#8E97A9; --line:#252C3A;
+  --accent:#8199FF; --accent-ink:#0A0E1B; --accent-soft:#1F2846;
+  --mat:#191E29; --mat-edge:rgba(0,0,0,.5); --dot:rgba(190,205,240,.08);
+  --chip:rgba(20,24,32,.88); --shadow:0 12px 32px rgba(0,0,0,.5);
+  --good:#4FCB8B; --dnf:#F0915A;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.app{
+  height:100%;
+  display:grid;
+  grid-template-columns:minmax(300px,370px) minmax(0,1fr);
+  grid-template-areas:"rail stage";
+  gap:16px;
+  padding-block:16px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.rail{
+  grid-area:rail;
+  display:flex;flex-direction:column;gap:20px;
+  min-height:0;overflow-y:auto;
+  padding:22px 20px;
+  background:var(--rail);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+}
+.rail > *{min-width:0}
+
+.brand h1{margin:0;font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;line-height:1.15;text-wrap:balance}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:14px}
+
+.label{margin:0 0 10px;font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.label span{letter-spacing:0;text-transform:none;font-weight:500}
+
+.time{font-family:var(--font-display);font-weight:800;font-size:clamp(44px,4.2vw,58px);line-height:1;letter-spacing:-.045em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.time.is-done{color:var(--good)}
+.time.is-dnf{color:var(--dnf)}
+.status{margin:12px 0 0;min-height:3em;color:var(--muted);font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.stats div{min-width:0}
+.stats dt{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stats dd{margin:3px 0 0;font-family:var(--font-display);font-weight:600;font-size:14.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.seg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.seg.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.seg button{appearance:none;border:0;background:transparent;color:var(--ink);font:600 13px/1 var(--font-display);padding:11px 0;border-radius:8px;cursor:pointer}
+.seg.two button{font-family:var(--font-ui);font-size:14px}
+.seg button:hover:not([aria-pressed="true"]):not([aria-checked="true"]){background:var(--accent-soft)}
+.seg button[aria-pressed="true"], .seg button[aria-checked="true"]{background:var(--accent);color:var(--accent-ink)}
+
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 13px/1.15 var(--font-ui);padding:10px 2px;border-radius:8px;cursor:pointer}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{background:var(--rail);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+
+.panel{display:flex;flex-direction:column;gap:16px;min-width:0}
+.lead{margin:0;color:var(--muted);font-size:14px}
+
+.actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.btn{appearance:none;font:600 14px/1.1 var(--font-ui);padding:12px 8px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);padding:14px}
+.btn.wide{grid-column:1/-1}
+.btn.small{padding:8px 10px;font-size:13px;border-radius:8px}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:12.5px;font-weight:600;color:var(--muted)}
+.field input, .field select{font:500 14px/1.2 var(--font-ui);padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%;min-width:0}
+.check{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--muted)}
+.check input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.note{margin:0;font-size:13px;color:var(--muted);padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.note.warn{border-color:var(--dnf);color:var(--ink)}
+.ai-box{display:flex;flex-direction:column;gap:12px}
+.ai-actions{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.thought{margin:0;font-size:12.5px;color:var(--muted);font-style:italic;max-height:7.5em;overflow:hidden;overflow-wrap:anywhere}
+.ai-log{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:18em;overflow-y:auto}
+.ai-log li{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line);overflow-wrap:anywhere}
+.ai-log li.err{border-color:var(--dnf)}
+.ai-log li.end{border-color:var(--accent)}
+.ai-log .mv{display:block;font-family:var(--font-display);font-size:12px;margin-top:2px}
+.ai-log .who{font-weight:600}
+
+.help summary{cursor:pointer;font-weight:600}
+.help ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:13.5px;display:grid;gap:7px}
+.help b{color:var(--ink);font-weight:600}
+kbd{font-family:var(--font-display);font-size:11px;padding:1px 5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;background:var(--bg);color:var(--ink);white-space:nowrap}
+.seq{margin:0;font-family:var(--font-display);font-size:12.5px;line-height:1.8;word-spacing:.3em;max-height:9.6em;overflow-y:auto;overflow-wrap:anywhere}
+.seq-note{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.steps li{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);font-size:13.5px}
+.steps li.now{border-color:var(--accent);background:var(--accent-soft)}
+.steps li.done{color:var(--muted)}
+.steps .cnt{font-family:var(--font-display);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.guide-title{margin:0;font-family:var(--font-display);font-size:16px;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+.guide-head{display:flex;flex-direction:column;gap:6px}
+.guide-steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.guide-steps details{border:1px solid var(--line);border-radius:12px;padding:0 14px;background:var(--rail)}
+.guide-steps summary{cursor:pointer;padding:12px 0;font-weight:600;display:flex;gap:10px;align-items:baseline}
+.guide-steps summary .num{font-family:var(--font-display);font-size:12px;color:var(--accent)}
+.guide-steps .body{padding-bottom:14px;display:grid;gap:10px;font-size:14px}
+.guide-steps p{margin:0}
+.alg{display:grid;gap:6px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.alg-row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.alg code{font-family:var(--font-display);font-size:13px;line-height:1.6;word-spacing:.15em;overflow-wrap:anywhere;min-width:0}
+.alg .btn{flex:none}
+.alg-note{margin:0;font-size:12.5px;color:var(--muted)}
+
+.stage{
+  grid-area:stage;position:relative;min-width:0;min-height:0;
+  border-radius:calc(var(--radius) + 4px);overflow:hidden;border:1px solid var(--line);
+  background-color:var(--mat);
+  background-image:radial-gradient(ellipse at 50% 45%, transparent 35%, var(--mat-edge) 100%), radial-gradient(var(--dot) 1.1px, transparent 1.6px);
+  background-size:100% 100%, 22px 22px;
+}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.stage canvas.dragging{cursor:grabbing}
+.chip{position:absolute;top:14px;font-family:var(--font-display);font-size:12.5px;line-height:1.2;padding:8px 12px;border-radius:999px;background:var(--chip);border:1px solid var(--line);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);pointer-events:none;white-space:nowrap;max-width:calc(100% - 28px);overflow:hidden;text-overflow:ellipsis}
+.chip.left{left:14px;max-width:calc(58% - 20px)}
+.chip.right{right:14px;color:var(--muted);max-width:calc(42% - 20px)}
+.chip b{font-weight:800;color:var(--accent)}
+.hint{position:absolute;left:14px;right:14px;bottom:12px;margin:0;text-align:center;font-size:12.5px;color:var(--muted);pointer-events:none}
+.toast{position:absolute;left:50%;top:60px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 28px);display:flex;gap:14px;align-items:center;padding:12px 18px;border-radius:14px;background:var(--rail);border:1px solid var(--line);box-shadow:var(--shadow)}
+.toast .pip{flex:none;width:10px;height:10px;border-radius:50%;background:var(--good)}
+.toast strong{font-family:var(--font-display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
+.toast span{color:var(--muted);font-size:13.5px}
+.playbar{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;border-radius:14px;background:var(--chip);border:1px solid var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.playbar .spd{display:flex;align-items:center;gap:8px;flex:1 1 170px;min-width:0;font-size:13px;color:var(--muted)}
+.playbar input[type=range]{flex:1;min-width:70px;accent-color:var(--accent)}
+.playbar output{font-family:var(--font-display);font-size:12px;white-space:nowrap;color:var(--ink);min-width:7.5em}
+.fail{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+
+@media (max-width: 860px){
+  .app{height:auto;min-height:100%;grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "clock" "stage" "sizes" "tabs" "panel";gap:16px}
+  .rail{display:contents}
+  .brand{grid-area:brand}
+  .clock{grid-area:clock}
+  .sizes{grid-area:sizes}
+  .tabs{grid-area:tabs}
+  .panel{grid-area:panel;padding-bottom:8px}
+  .stage{height:min(100vw - 32px, 64vh);min-height:300px}
+  .time{font-size:46px}
+  .status{min-height:0}
+  .hint{font-size:12px}
+  .playbar{left:8px;right:8px;bottom:8px;padding:8px}
+}
+</style>
+
+<div class="app">
+  <div class="rail">
+    <header class="brand">
+      <h1>Big Cube Lab</h1>
+      <p>Scramble a 3×3 up to a 7×7, race the clock, learn the method, or watch a solver and an AI try.</p>
+    </header>
+
+    <section class="clock">
+      <div class="time" id="time">0.00</div>
+      <p class="status" id="status" aria-live="polite"></p>
+      <dl class="stats">
+        <div><dt>Moves</dt><dd id="statMoves">0</dd></div>
+        <div><dt title="Turns per second">TPS</dt><dd id="statTps">–</dd></div>
+        <div><dt>Best</dt><dd id="statBest">–</dd></div>
+        <div><dt title="Average of your last 5 solves at this size, with the best and worst dropped">Ao5</dt><dd id="statAo5">–</dd></div>
+      </dl>
+    </section>
+
+    <section class="sizes">
+      <h2 class="label" id="sizeLabel">Cube size</h2>
+      <div class="seg" role="group" aria-labelledby="sizeLabel">
+        <button type="button" id="size3" data-n="3" aria-pressed="false">3×3</button>
+        <button type="button" id="size4" data-n="4" aria-pressed="true">4×4</button>
+        <button type="button" id="size5" data-n="5" aria-pressed="false">5×5</button>
+        <button type="button" id="size6" data-n="6" aria-pressed="false">6×6</button>
+        <button type="button" id="size7" data-n="7" aria-pressed="false">7×7</button>
+      </div>
+    </section>
+
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button type="button" role="tab" id="tab-play" aria-controls="panel-play" aria-selected="true">Play</button>
+      <button type="button" role="tab" id="tab-learn" aria-controls="panel-learn" aria-selected="false" tabindex="-1">Learn</button>
+      <button type="button" role="tab" id="tab-solver" aria-controls="panel-solver" aria-selected="false" tabindex="-1">Solver</button>
+      <button type="button" role="tab" id="tab-ai" aria-controls="panel-ai" aria-selected="false" tabindex="-1">AI players</button>
+    </div>
+
+    <section class="panel" id="panel-play" role="tabpanel" aria-labelledby="tab-play">
+      <div class="actions" aria-label="Game controls">
+        <button type="button" class="btn primary wide" id="btnScramble">New scramble</button>
+        <button type="button" class="btn" id="btnUndo">Undo</button>
+        <button type="button" class="btn" id="btnGiveUp">Give up</button>
+        <button type="button" class="btn" id="btnView">Reset view</button>
+      </div>
+      <details class="help" id="help" open>
+        <summary>How to play</summary>
+        <ul>
+          <li><b>Drag a sticker</b> to turn the layer under it. Inner layers turn too, so you can reach every slice of a big cube.</li>
+          <li><b>Drag the empty mat</b> to look around the cube.</li>
+          <li>Keys <kbd>U</kbd> <kbd>D</kbd> <kbd>L</kbd> <kbd>R</kbd> <kbd>F</kbd> <kbd>B</kbd> turn the outer layers; hold <kbd>Shift</kbd> to turn counter-clockwise. Type a number first for an inner layer: <kbd>2</kbd> then <kbd>R</kbd> turns the second layer from the right (2R).</li>
+          <li>Keys follow your view: F is the side facing you.</li>
+          <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> or <kbd>Backspace</kbd> undoes your last turn. An undo still counts as a move.</li>
+          <li><b>Give up</b> plays every turn backwards to the solved cube. The attempt counts as DNF (did not finish).</li>
+          <li>The <b>Learn</b> tab has a step-by-step method for each size. The <b>Solver</b> and <b>AI players</b> tabs let a computer play.</li>
+        </ul>
+      </details>
+      <div class="scramble">
+        <h2 class="label">Scramble <span id="scrambleLen"></span></h2>
+        <p class="seq" id="scrambleText"></p>
+        <p class="seq-note">To copy it onto a real cube, hold it white on top and green in front.</p>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-learn" role="tabpanel" aria-labelledby="tab-learn" hidden>
+      <div class="guide-head">
+        <h2 class="guide-title" id="guideTitle"></h2>
+        <p class="lead" id="guideIntro"></p>
+      </div>
+      <details class="help">
+        <summary>How to read the moves</summary>
+        <ul id="notationList"></ul>
+      </details>
+      <ol class="guide-steps" id="guideSteps"></ol>
+    </section>
+
+    <section class="panel" id="panel-solver" role="tabpanel" aria-labelledby="tab-solver" hidden>
+      <p class="lead">The solver reads only the sticker colours. It never sees your scramble or your turns. It moves three pieces at a time, the way blindfold solvers work, so it uses far more turns than a person would.</p>
+      <button type="button" class="btn primary" id="btnSolve">Watch the solver</button>
+      <p class="lead" id="solverInfo">It starts slowly, at 2 turns a second. The three pieces it is moving light up in pink. Use the bar on the cube to pause, step, change speed or finish.</p>
+      <ol class="steps" id="solverSteps"></ol>
+    </section>
+
+    <section class="panel" id="panel-ai" role="tabpanel" aria-labelledby="tab-ai" hidden>
+      <p class="lead">Let an AI play your cube move by move. It sees the colours and the move rules, nothing else. The game scores how many stickers match the main colour of their side.</p>
+      <div class="seg two" role="radiogroup" aria-label="AI player">
+        <button type="button" role="radio" id="aiPickClaude" aria-checked="true">Claude</button>
+        <button type="button" role="radio" id="aiPickGemini" aria-checked="false">Gemini</button>
+      </div>
+      <div class="ai-box" id="aiClaudeBox">
+        <p class="note" id="claudeNote">Checking whether Claude is available here…</p>
+        <div class="field">
+          <label for="claudeTier">Claude model</label>
+          <select id="claudeTier">
+            <option value="quick">Fast</option>
+            <option value="default" selected>Balanced</option>
+            <option value="complex">Strongest (slower)</option>
+          </select>
+        </div>
+      </div>
+      <div class="ai-box" id="aiGeminiBox" hidden>
+        <p class="note" id="geminiNote"></p>
+        <div class="field">
+          <label for="geminiKey">Gemini API key</label>
+          <input type="password" id="geminiKey" autocomplete="off" spellcheck="false" placeholder="Paste your key">
+        </div>
+        <label class="check"><input type="checkbox" id="geminiRemember"> Remember the key on this device</label>
+        <div class="field">
+          <label for="geminiModel">Gemini model</label>
+          <select id="geminiModel"><option value="">Load your models first</option></select>
+        </div>
+        <button type="button" class="btn small" id="geminiLoad">Load my models</button>
+      </div>
+      <div class="field">
+        <label for="aiBudget">Moves for this game</label>
+        <select id="aiBudget">
+          <option value="60">60</option>
+          <option value="150" selected>150</option>
+          <option value="300">300</option>
+        </select>
+      </div>
+      <div class="ai-actions">
+        <button type="button" class="btn primary" id="aiGo">Let Claude play</button>
+        <button type="button" class="btn" id="aiStop" disabled>Stop</button>
+      </div>
+      <p class="status" id="aiStatus" aria-live="polite"></p>
+      <p class="thought" id="aiThought" hidden></p>
+      <dl class="stats">
+        <div><dt>Start</dt><dd id="aiStart">–</dd></div>
+        <div><dt>Now</dt><dd id="aiNow">–</dd></div>
+        <div><dt>Best</dt><dd id="aiBest">–</dd></div>
+        <div><dt>Moves</dt><dd id="aiMoves">–</dd></div>
+      </dl>
+      <ol class="ai-log" id="aiLog"></ol>
+      <p class="lead" id="aiHistory"></p>
+    </section>
+  </div>
+
+  <main class="stage" id="stage">
+    <canvas id="cv" role="img" aria-label="3D cube puzzle. Drag a sticker to turn a layer, or drag the background to rotate the view."></canvas>
+    <div class="chip left" id="chipMove">No turns yet</div>
+    <div class="chip right" id="chipSize">4×4 · 56 pieces</div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="playbar" id="playbar" hidden>
+      <button type="button" class="btn small" id="pbPause">Pause</button>
+      <button type="button" class="btn small" id="pbStep" hidden>Step</button>
+      <div class="spd">
+        <label for="pbSpeed">Speed</label>
+        <input type="range" id="pbSpeed" min="0" max="9" step="1" value="2">
+        <output id="pbSpeedOut" for="pbSpeed">2 turns/s</output>
+      </div>
+      <button type="button" class="btn small" id="pbFinish">Finish now</button>
+      <button type="button" class="btn small" id="pbStop">Stop</button>
+    </div>
+    <p class="hint" id="hint">Drag a sticker to turn · drag the mat to look around</p>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*@@SOLVER@@*/
+</script>
+<script>
+/*@@NOTATION@@*/
+</script>
+<script>
+/*@@GUIDE@@*/
+</script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const stage = $('stage'), canvas = $('cv');
+
+if (typeof THREE === 'undefined') {
+  stage.insertAdjacentHTML('beforeend', '<div class="fail">The 3D engine could not load. Check your connection and reload the page.</div>');
+  return;
+}
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+} catch (err) {
+  stage.insertAdjacentHTML('beforeend', '<div class="fail">This browser cannot show 3D graphics (WebGL is turned off or not supported).</div>');
+  return;
+}
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SIZES = [3, 4, 5, 6, 7];
+const SCRAMBLE_LEN = { 3: 25, 4: 40, 5: 60, 6: 80, 7: 100 };
+const AXN = ['x', 'y', 'z'];
+// Faces: 0 +x R red, 1 -x L orange, 2 +y U white, 3 -y D yellow, 4 +z F green, 5 -z B blue
+const FACE_HEX = [0xC62C2C, 0xF2761B, 0xF1F2EC, 0xF5CF1D, 0x13A052, 0x1F5BD8];
+const COLOUR_LETTER = ['R', 'O', 'W', 'Y', 'G', 'B'];
+const FACE_DIR = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].map(a => new THREE.Vector3(a[0], a[1], a[2]));
+const FACE_ROT = [[0, Math.PI/2, 0], [0, -Math.PI/2, 0], [-Math.PI/2, 0, 0], [Math.PI/2, 0, 0], [0, 0, 0], [0, Math.PI, 0]];
+const IDENT = [{ i: 0, s: 1 }, { i: 1, s: 1 }, { i: 2, s: 1 }]; // R, U, F in the starting view
+const SPEEDS = [0.5, 1, 2, 3, 5, 8, 12, 20, 40, 80]; // turns per second for the solver and AI playback
+const AI_MAX_PER_ROUND = 12, AI_ROUNDS = 4;
+
+// ---------- browser storage (per viewer, may be unavailable) ----------
+const store = {
+  get(k, fallback) { try { const v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+const K = {
+  solves: 'big-cube-lab:solves:v1', size: 'big-cube-lab:size', speed: 'big-cube-lab:speed', tab: 'big-cube-lab:tab',
+  aiWho: 'big-cube-lab:ai-who', tier: 'big-cube-lab:claude-tier', gKey: 'big-cube-lab:gemini-key',
+  gModel: 'big-cube-lab:gemini-model', budget: 'big-cube-lab:ai-budget', aiRes: 'big-cube-lab:ai-results:v1',
+};
+
+// ---------- scene ----------
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 400);
+scene.add(camera);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x7d8597, 0.9));
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.6);
+keyLight.position.set(-2, 4, 3);
+camera.add(keyLight);
+const cubeRoot = new THREE.Group();
+scene.add(cubeRoot);
+const pivot = new THREE.Object3D();
+cubeRoot.add(pivot);
+
+const bodyGeo = new THREE.BoxGeometry(0.97, 0.97, 0.97);
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0x15171c, roughness: 0.55, metalness: 0 });
+const hlMat = new THREE.MeshStandardMaterial({ color: 0xff3cc7, emissive: 0x8f1a6e, emissiveIntensity: 0.7, roughness: 0.45, metalness: 0 });
+function roundedSquare(size, r) {
+  const s = size / 2, sh = new THREE.Shape();
+  sh.moveTo(-s + r, -s); sh.lineTo(s - r, -s); sh.quadraticCurveTo(s, -s, s, -s + r);
+  sh.lineTo(s, s - r); sh.quadraticCurveTo(s, s, s - r, s);
+  sh.lineTo(-s + r, s); sh.quadraticCurveTo(-s, s, -s, s - r);
+  sh.lineTo(-s, -s + r); sh.quadraticCurveTo(-s, -s, -s + r, -s);
+  return new THREE.ShapeGeometry(sh, 4);
+}
+const stickerGeo = roundedSquare(0.84, 0.13);
+const stickerMats = FACE_HEX.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.32, metalness: 0 }));
+
+// ---------- state ----------
+let n = 4, N = makeNotation(4);
+let cubies = [], stickers = [], pickables = [];
+let applied = [];   // every turn since the cube was last solved (scramble + yours + the computer's)
+let userHist = [];  // your turns since the scramble, for Undo
+let scramble = [];
+let phase = 'free'; // free | ready | solving | solved | rewinding | botsolving | aiplaying
+let startT = 0, finalMs = null, dnf = false, moves = 0, lastBest = false;
+let pendingDepth = 0, lastNote = '';
+let queue = [], anim = null, spin = null, groupSeq = 0;
+let speedIdx = Math.min(SPEEDS.length - 1, Math.max(0, Number(store.get(K.speed, 2)) | 0));
+let paused = false, stepReq = false, nextPacedAt = 0;
+let theta = 0.6, phi = 1.02, dist = 14, cw = 1, ch = 1;
+let toastTimer = 0;
+let bot = null, infoMsg = '', solveToken = 0;
+let highlighted = [];
+let ai = null, aiBusy = false, aiDrain = null;
+let aiWho = store.get(K.aiWho, 'claude') === 'gemini' ? 'gemini' : 'claude';
+let sampleFn = null, sampleLimits = null, claudeState = 'checking', toolsBroken = false;
+const inClaude = !!(window.claude && typeof window.claude.use === 'function');
+const geminiBlocked = inClaude; // claude.ai pages may not contact other websites
+let solves = store.get(K.solves, {}); if (!solves || typeof solves !== 'object') solves = {};
+const locked = () => phase === 'rewinding' || phase === 'botsolving' || phase === 'aiplaying';
+
+// ---------- cube ----------
+function build(size) {
+  clearHighlight();
+  for (const c of cubies) cubeRoot.remove(c);
+  cubies = []; stickers = []; pickables = [];
+  const h = (size - 1) / 2;
+  for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) for (let k = 0; k < size; k++) {
+    const p = [i - h, j - h, k - h];
+    if (Math.abs(p[0]) < h && Math.abs(p[1]) < h && Math.abs(p[2]) < h) continue; // hidden inside
+    const g = new THREE.Group();
+    g.position.set(p[0], p[1], p[2]);
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.userData = { cubie: g };
+    g.userData.body = body;
+    g.add(body); pickables.push(body);
+    for (let f = 0; f < 6; f++) {
+      const ax = f >> 1, sg = (f & 1) ? -1 : 1;
+      if (Math.abs(p[ax] * sg - h) > 1e-6) continue;
+      const st = new THREE.Mesh(stickerGeo, stickerMats[f]);
+      st.position.copy(FACE_DIR[f]).multiplyScalar(0.492);
+      st.rotation.set(FACE_ROT[f][0], FACE_ROT[f][1], FACE_ROT[f][2]);
+      st.userData = { cubie: g, face: f };
+      g.add(st); stickers.push(st); pickables.push(st);
+    }
+    cubeRoot.add(g); cubies.push(g);
+  }
+  $('chipSize').textContent = `${size}×${size} · ${cubies.length} pieces`;
+}
+
+const _m4 = new THREE.Matrix4();
+function snap(c) {
+  c.position.set(Math.round(c.position.x * 2) / 2, Math.round(c.position.y * 2) / 2, Math.round(c.position.z * 2) / 2);
+  _m4.makeRotationFromQuaternion(c.quaternion);
+  const e = _m4.elements;
+  for (const idx of [0, 1, 2, 4, 5, 6, 8, 9, 10]) e[idx] = Math.round(e[idx]);
+  c.quaternion.setFromRotationMatrix(_m4);
+  c.scale.set(1, 1, 1);
+}
+function grabLayers(a, layers) { // layers: anything with .has(l2)
+  const ax = AXN[a], list = [];
+  for (const c of cubies) if (layers.has(Math.round(c.position[ax] * 2))) list.push(c);
+  for (const c of list) pivot.attach(c);
+  return list;
+}
+function release(list) {
+  pivot.updateMatrixWorld(true);
+  for (const c of list) { cubeRoot.attach(c); snap(c); }
+  pivot.rotation.set(0, 0, 0);
+}
+function applyInstant(m) {
+  const list = grabLayers(m.a, new Set([m.l2]));
+  pivot.rotation[AXN[m.a]] = m.d * Math.PI / 2;
+  release(list);
+}
+function faceOfSticker(st, v) {
+  v.copy(FACE_DIR[st.userData.face]).applyQuaternion(st.userData.cubie.quaternion);
+  const ax = bestAxis(v, -1);
+  return ax.i * 2 + (ax.s > 0 ? 0 : 1);
+}
+function isSolved() {
+  const col = [-1, -1, -1, -1, -1, -1], v = new THREE.Vector3();
+  for (const st of stickers) {
+    const f = faceOfSticker(st, v);
+    if (col[f] === -1) col[f] = st.userData.face;
+    else if (col[f] !== st.userData.face) return false;
+  }
+  return true;
+}
+const inv = m => ({ a: m.a, l2: m.l2, d: -m.d });
+function pushApplied(m) {
+  const last = applied[applied.length - 1];
+  if (last && last.a === m.a && last.l2 === m.l2 && last.d === -m.d) applied.pop();
+  else applied.push(m);
+}
+// colour of every sticker, in the solver's order (the solver gets nothing else)
+function readColours() {
+  const state = new Int8Array(6 * n * n).fill(-1), v = new THREE.Vector3();
+  for (const st of stickers) {
+    const c = st.userData.cubie, f = faceOfSticker(st, v);
+    state[CubeSolver.faceletIndex(n, [Math.round(c.position.x * 2), Math.round(c.position.y * 2), Math.round(c.position.z * 2)], f)] = st.userData.face;
+  }
+  return state;
+}
+// each side as rows of colour letters, in a fixed viewpoint (for the AI players)
+function faceGrids() {
+  const g = {}, h2 = n - 1, v = new THREE.Vector3();
+  for (const f of 'RLUDFB') g[f] = Array.from({ length: n }, () => new Array(n).fill('?'));
+  for (const st of stickers) {
+    const c = st.userData.cubie, f = faceOfSticker(st, v);
+    const x = Math.round(c.position.x * 2), y = Math.round(c.position.y * 2), z = Math.round(c.position.z * 2);
+    let r, col;
+    switch (f) {
+      case 0: r = (h2 - y) / 2; col = (h2 - z) / 2; break; // R, seen from the right
+      case 1: r = (h2 - y) / 2; col = (z + h2) / 2; break; // L, seen from the left
+      case 2: r = (z + h2) / 2; col = (x + h2) / 2; break; // U, seen from above, back row first
+      case 3: r = (h2 - z) / 2; col = (x + h2) / 2; break; // D, seen from below, front row first
+      case 4: r = (h2 - y) / 2; col = (x + h2) / 2; break; // F
+      default: r = (h2 - y) / 2; col = (h2 - x) / 2;       // B, seen from behind
+    }
+    g['RLUDFB'[f]][r][col] = COLOUR_LETTER[st.userData.face];
+  }
+  return g;
+}
+function stateText() {
+  const g = faceGrids();
+  return ['U', 'L', 'F', 'R', 'B', 'D'].map(f => f + ':\n' + g[f].map(row => row.join(' ')).join('\n')).join('\n');
+}
+function progress() {
+  const g = faceGrids(); let match = 0, total = 0;
+  for (const f of 'RLUDFB') {
+    const cells = g[f].flat();
+    let main;
+    if (n % 2) main = g[f][(n - 1) / 2][(n - 1) / 2];
+    else { const cnt = {}; for (const c of cells) cnt[c] = (cnt[c] || 0) + 1; main = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0]; }
+    for (const c of cells) if (c === main) match++;
+    total += cells.length;
+  }
+  return { match, total, pct: Math.round(1000 * match / total) / 10 };
+}
+
+// ---------- notation helpers ----------
+function bestAxis(v, skip) {
+  let bi = -1, bc = 0;
+  for (let i = 0; i < 3; i++) {
+    if (i === skip) continue;
+    const c = v.getComponent(i);
+    if (bi < 0 || Math.abs(c) > Math.abs(bc)) { bi = i; bc = c; }
+  }
+  return { i: bi, s: bc >= 0 ? 1 : -1 };
+}
+function crossAx(A, B) { // signed unit axis A × B
+  const c = 3 - A.i - B.i, eps = ((B.i - A.i + 3) % 3 === 1) ? 1 : -1;
+  return { i: c, s: A.s * B.s * eps };
+}
+function viewFrame() {
+  const fwd = camera.position.clone().normalize();
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+  const F = bestAxis(fwd, -1), U = bestAxis(up, F.i);
+  return [crossAx(U, F), U, F]; // R, U, F
+}
+function noteFor(m, fr) {
+  const h2 = n - 1, k = fr.findIndex(v => v.i === m.a), s = fr[k].s;
+  const L2 = s * m.l2, d = s * m.d;
+  let face, cwise, depth;
+  if (L2 === 0) { face = 'MES'[k]; depth = 1; cwise = k === 2 ? d < 0 : d > 0; }
+  else if (L2 > 0) { face = 'RUF'[k]; depth = (h2 - L2) / 2 + 1; cwise = d < 0; }
+  else { face = 'LDB'[k]; depth = (L2 + h2) / 2 + 1; cwise = d > 0; }
+  return (depth > 1 ? depth : '') + face + (cwise ? '' : "'");
+}
+function makeScramble(size) {
+  const out = [];
+  let lastA = -1;
+  while (out.length < SCRAMBLE_LEN[size]) {
+    const a = Math.floor(Math.random() * 3);
+    if (a === lastA) continue;
+    const idx = Math.floor(Math.random() * size);
+    out.push({ a, l2: 2 * idx - (size - 1), d: Math.random() < 0.5 ? 1 : -1 });
+    lastA = a;
+  }
+  return out;
+}
+
+// ---------- animation: a queue of turns; turns that share a group (a wide or half turn) move together ----------
+const isPaced = it => it.kind === 'bot' || it.kind === 'ai';
+function takeGroup() {
+  const first = queue.shift(), items = [first];
+  if (first.group != null) while (queue.length && queue[0].group === first.group) items.push(queue.shift());
+  return items;
+}
+function startGroup(items, now, dur) {
+  const a = items[0].move.a;
+  const per = new Map();
+  let uniform = items.every(it => it.move.a === a);
+  if (uniform) {
+    for (const it of items) per.set(it.move.l2, ((((per.get(it.move.l2) || 0) + it.move.d) % 4) + 4) % 4);
+    const qs = [...per.values()];
+    uniform = qs.every(q => q === qs[0]) && qs[0] !== 0;
+  }
+  if (!uniform) { // cannot move as one: play them one at a time
+    for (let i = items.length - 1; i >= 1; i--) { items[i].group = null; queue.unshift(items[i]); }
+    items = [items[0]];
+    per.clear(); per.set(items[0].move.l2, (items[0].move.d + 4) % 4);
+  }
+  const q = per.values().next().value;
+  const list = grabLayers(items[0].move.a, per);
+  anim = { items, list, t0: now, dur: reduceMotion ? 0 : dur, ax: AXN[items[0].move.a], target: (q === 3 ? -1 : q) * Math.PI / 2 };
+  onGroupStart(items, anim.dur > 0);
+  if (anim.dur <= 0) finishAnim();
+}
+function stepAnim(now) {
+  const t = (now - anim.t0) / anim.dur;
+  if (t >= 1) { finishAnim(); return; }
+  pivot.rotation[anim.ax] = anim.target * (1 - Math.pow(1 - t, 3));
+}
+function finishAnim() {
+  const a = anim; anim = null;
+  pivot.rotation[a.ax] = a.target;
+  release(a.list);
+  for (const it of a.items) pushApplied(it.move);
+  afterGroup(a.items);
+}
+function dropAnim() { // finish the current turn without game logic (before a rebuild)
+  if (!anim) return;
+  const a = anim; anim = null;
+  pivot.rotation[a.ax] = a.target;
+  release(a.list);
+}
+function pump(now) {
+  let guard = 0;
+  while (!anim && queue.length && guard++ < 80) {
+    const head = queue[0];
+    if (isPaced(head)) {
+      if (paused && !stepReq) return;
+      const interval = 1000 / SPEEDS[speedIdx];
+      const stepping = stepReq;
+      if (!stepping) {
+        if (now < nextPacedAt) return;
+        if (now - nextPacedAt > interval * 2) nextPacedAt = now; // no burst after a pause or a slow frame
+        nextPacedAt += interval;
+      }
+      stepReq = false;
+      startGroup(takeGroup(), now, stepping ? 360 : (interval >= 50 ? Math.min(420, interval * 0.8) : 0));
+      if (anim || stepping) return;
+      continue;
+    }
+    const items = takeGroup();
+    startGroup(items, now, items[0].dur != null ? items[0].dur : 150);
+    if (anim) return;
+  }
+}
+function finishKind(kind) { // play every queued turn of this kind at once
+  const now = performance.now();
+  if (anim && anim.items[0].kind === kind) finishAnim();
+  let guard = 0;
+  while (queue.length && queue[0].kind === kind && guard++ < 200000) startGroup(takeGroup(), now, 0);
+}
+function onGroupStart(items, animating) {
+  const it = items[0];
+  if (it.kind === 'bot' && bot && it.seg !== bot.curSeg) { bot.curSeg = it.seg; onSegment(animating); }
+}
+
+// ---------- game ----------
+function afterGroup(items) {
+  const kind = items[0].kind;
+  if (kind === 'rewind') { if (!queue.length) endRewind(); return; }
+  if (kind === 'bot') {
+    if (!bot) return;
+    bot.done += items.length;
+    if (!queue.some(q => q.kind === 'bot')) endBot(bot.stopping ? 'stopped' : 'done');
+    else if (bot.done % 3 < items.length) setChip();
+    return;
+  }
+  if (kind === 'ai') { if (ai) setChip(); return; }
+  const solved = isSolved();
+  if (solved) applied = [];
+  if (solved && phase === 'solving') completeSolve(items[items.length - 1].t);
+  refreshButtons();
+}
+function userMove(m, opts) {
+  opts = opts || {};
+  if (locked()) return;
+  const now = performance.now();
+  infoMsg = '';
+  if (phase === 'ready') { phase = 'solving'; startT = now; }
+  else if (phase === 'solved') { phase = 'free'; }
+  if (!opts.undo) userHist.push(m);
+  if (phase === 'solving') moves++;
+  const dur = opts.dur != null ? opts.dur : (queue.length > 1 ? 70 : (queue.length ? 105 : 150));
+  queue.push({ move: m, kind: 'user', t: now, dur, group: opts.group != null ? opts.group : null });
+  lastNote = opts.note || noteFor(m, viewFrame());
+  setChip(); updateStats(); setStatus(); refreshButtons();
+}
+function undo() {
+  if (locked() || phase === 'solved' || !userHist.length) return;
+  userMove(inv(userHist.pop()), { undo: true });
+}
+function completeSolve(t) {
+  phase = 'solved';
+  finalMs = t - startT;
+  userHist = [];
+  const key = String(n);
+  const list = Array.isArray(solves[key]) ? solves[key] : (solves[key] = []);
+  const prevBest = list.length ? Math.min(...list.map(s => s.ms)) : Infinity;
+  list.push({ ms: Math.round(finalMs), moves });
+  if (list.length > 50) list.splice(0, list.length - 50);
+  store.set(K.solves, solves);
+  lastBest = finalMs < prevBest;
+  const tps = (moves / (finalMs / 1000)).toFixed(2);
+  showToast(fmt(finalMs), `${moves} moves · ${tps} TPS${lastBest ? ` · new ${n}×${n} best` : ''}`);
+  startSpin();
+  updateStats(); setStatus();
+}
+// stop anything the computer is doing (solver or AI) without touching the cube
+function cancelActivities() {
+  solveToken++;
+  if (bot) bot = null;
+  clearHighlight();
+  if (ai && !ai.finished) {
+    ai.finished = true; ai.reason = 'cancelled';
+    try { if (ai.ctl) ai.ctl.abort(); } catch (e) {}
+  }
+  if (aiDrain) { const d = aiDrain; aiDrain = null; d.resolve(); }
+  paused = false; stepReq = false;
+  hidePlaybar();
+}
+function newScramble() {
+  cancelActivities();
+  queue.length = 0;
+  dropAnim();
+  spin = null;
+  N = makeNotation(n);
+  build(n);
+  scramble = makeScramble(n);
+  for (const m of scramble) applyInstant(m);
+  applied = scramble.slice();
+  userHist = []; moves = 0; finalMs = null; dnf = false; lastBest = false;
+  pendingDepth = 0; lastNote = ''; infoMsg = '';
+  phase = 'ready';
+  resetView();
+  $('scrambleText').textContent = scramble.map(m => noteFor(m, IDENT)).join(' ');
+  $('scrambleLen').textContent = `· ${scramble.length} random turns`;
+  hideToast(); setChip(); updateStats(); setStatus(); refreshButtons(); syncSizeButtons();
+  renderGuide(); renderSolverPanel(); renderAI();
+  warmSolver(n);
+}
+function giveUp() {
+  if (locked()) return;
+  infoMsg = '';
+  queue.length = 0;
+  if (anim) finishAnim();
+  if (phase === 'solved') return; // that last turn solved it
+  if (phase === 'ready' || phase === 'solving') dnf = true;
+  pendingDepth = 0; userHist = [];
+  if (!applied.length) { phase = 'free'; setChip(); setStatus(); refreshButtons(); return; }
+  phase = 'rewinding';
+  const seq = applied.slice().reverse().map(inv);
+  const dur = Math.max(22, Math.min(110, 3800 / seq.length));
+  for (const m of seq) queue.push({ move: m, kind: 'rewind', dur });
+  setChip(); setStatus(); refreshButtons();
+}
+function endRewind() {
+  phase = 'free';
+  applied = [];
+  setStatus(); refreshButtons();
+}
+
+// ---------- solver (runs in a background worker when the browser allows it) ----------
+let solverWorker = null, solverReqId = 0;
+const solverPending = new Map();
+function initWorker() {
+  try {
+    const src = 'const cubeSolverFactory = ' + cubeSolverFactory.toString() + ';\n' +
+      'const CubeSolver = cubeSolverFactory();\n' +
+      'self.onmessage = function (e) { var m = e.data; try { if (m.type === "warm") { CubeSolver.get(m.n); return; }' +
+      ' var r = CubeSolver.get(m.n).solve(m.state); self.postMessage({ id: m.id, ok: true, res: r }); }' +
+      ' catch (err) { self.postMessage({ id: m.id, ok: false, error: String(err && err.message || err) }); } };';
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    solverWorker = new Worker(url);
+    solverWorker.onmessage = e => {
+      const p = solverPending.get(e.data.id); if (!p) return;
+      solverPending.delete(e.data.id);
+      if (e.data.ok) p.resolve(e.data.res); else p.reject(new Error(e.data.error));
+    };
+    solverWorker.onerror = ev => { // the worker could not run here: use the page instead
+      if (ev && ev.preventDefault) ev.preventDefault();
+      solverWorker = null;
+      for (const p of solverPending.values()) p.fallback();
+      solverPending.clear();
+    };
+  } catch (e) { solverWorker = null; }
+}
+function solveOnPage(size, state) {
+  return new Promise((resolve, reject) => setTimeout(() => {
+    try { resolve(CubeSolver.get(size).solve(state)); } catch (e) { reject(e); }
+  }, 30));
+}
+function solveAsync(size, state) {
+  if (!solverWorker) return solveOnPage(size, state);
+  return new Promise((resolve, reject) => {
+    const id = ++solverReqId;
+    solverPending.set(id, { resolve, reject, fallback: () => solveOnPage(size, state).then(resolve, reject) });
+    try { solverWorker.postMessage({ type: 'solve', id, n: size, state }); }
+    catch (e) { solverPending.delete(id); solveOnPage(size, state).then(resolve, reject); }
+  });
+}
+function warmSolver(size) { if (solverWorker) { try { solverWorker.postMessage({ type: 'warm', n: size }); } catch (e) {} } }
+
+function startSolver() {
+  if (locked()) return;
+  queue.length = 0;
+  if (anim) finishAnim();
+  if (isSolved()) {
+    applied = [];
+    infoMsg = 'This cube is already solved. Scramble it, or mix it up by hand, then try the solver.';
+    if (phase !== 'solved') phase = 'free';
+    setStatus(); refreshButtons(); renderSolverPanel();
+    return;
+  }
+  const timed = phase === 'ready' || phase === 'solving';
+  if (timed) dnf = true;
+  hideToast(); pendingDepth = 0; userHist = []; infoMsg = '';
+  phase = 'botsolving';
+  paused = false; stepReq = false;
+  const token = ++solveToken;
+  bot = { thinking: true, timed, total: 0, done: 0, segs: [], stages: [], curSeg: -1, ms: 0, cycles: 0 };
+  showPlaybar(); renderSolverPanel(); setChip(); setStatus(); refreshButtons();
+  const t0 = performance.now();
+  solveAsync(n, readColours()).then(res => {
+    if (token !== solveToken || phase !== 'botsolving' || !bot) return; // cancelled meanwhile
+    bot.thinking = false;
+    bot.ms = Math.round(performance.now() - t0);
+    bot.segs = res.segments;
+    bot.cycles = res.segments.filter(s => s.kind !== 'parity').length;
+    bot.stages = [];
+    res.segments.forEach((sg, i) => {
+      const last = bot.stages[bot.stages.length - 1];
+      if (last && last.name === sg.name) { last.end = i; last.count++; }
+      else bot.stages.push({ name: sg.name, kind: sg.kind, start: i, end: i, count: 1, turns: 0 });
+      bot.stages[bot.stages.length - 1].turns += sg.turns.reduce((s, t) => s + (t.q === 2 ? 2 : 1), 0);
+    });
+    let total = 0;
+    res.segments.forEach((sg, si) => {
+      for (const t of sg.turns) {
+        const group = ++groupSeq;
+        const d = t.q === 3 ? -1 : 1;
+        queue.push({ kind: 'bot', seg: si, group, move: { a: t.a, l2: t.l2, d } });
+        if (t.q === 2) queue.push({ kind: 'bot', seg: si, group, move: { a: t.a, l2: t.l2, d } });
+        total += t.q === 2 ? 2 : 1;
+      }
+    });
+    bot.total = total;
+    nextPacedAt = performance.now();
+    if (!total) endBot('done');
+    renderSolverPanel(); setChip(); setStatus(); refreshButtons(); updatePlaybar();
+  }).catch(err => {
+    if (token !== solveToken) return;
+    phase = 'free'; bot = null;
+    infoMsg = 'The solver could not handle this cube (' + (err && err.message ? err.message : err) + ').';
+    hidePlaybar(); renderSolverPanel(); setChip(); setStatus(); refreshButtons();
+  });
+}
+function onSegment(animating) {
+  const sg = bot.segs[bot.curSeg];
+  if (animating && sg && sg.pieces.length) setHighlight(sg.pieces); else clearHighlight();
+  renderSolverPanel();
+}
+function setHighlight(positions) {
+  clearHighlight();
+  for (const p of positions) {
+    const c = cubies.find(c => Math.round(c.position.x * 2) === p[0] && Math.round(c.position.y * 2) === p[1] && Math.round(c.position.z * 2) === p[2]);
+    if (c && c.userData.body) { c.userData.body.material = hlMat; highlighted.push(c.userData.body); }
+  }
+}
+function clearHighlight() {
+  for (const b of highlighted) b.material = bodyMat;
+  highlighted = [];
+}
+function stopBot() {
+  if (phase !== 'botsolving' || !bot) return;
+  if (bot.thinking) { solveToken++; }
+  bot.stopping = true;
+  queue = queue.filter(q => q.kind !== 'bot');
+  if (anim && anim.items[0].kind === 'bot') finishAnim();
+  if (bot) endBot('stopped');
+}
+function finishBot() {
+  if (phase !== 'botsolving' || !bot || bot.thinking) return;
+  clearHighlight();
+  finishKind('bot');
+}
+function endBot(reason) {
+  if (!bot) return;
+  const b = bot, ok = isSolved();
+  phase = 'free';
+  clearHighlight(); hidePlaybar(); paused = false;
+  if (ok) applied = [];
+  if (reason === 'stopped') infoMsg = b.thinking ? 'You stopped the solver before it started.' : `You stopped the solver after ${b.done} of ${b.total} turns.`;
+  else if (ok) { infoMsg = `Solved by the solver: ${b.total.toLocaleString()} turns in ${b.cycles} three-cycles, worked out in ${b.ms.toLocaleString()} ms from the sticker colours alone.`; startSpin(); }
+  else infoMsg = 'The solver played its turns but the cube is not solved. That is a bug in the solver.';
+  if (b.timed) infoMsg += ' Your timed attempt counts as DNF.';
+  b.finished = reason;
+  bot = null;
+  renderSolverPanel(b);
+  setChip(); setStatus(); refreshButtons();
+}
+function renderSolverPanel(doneBot) {
+  const b = bot || doneBot || null;
+  const list = $('solverSteps');
+  list.textContent = '';
+  const btn = $('btnSolve');
+  btn.textContent = bot ? (bot.thinking ? 'Working it out…' : 'Solver running') : 'Watch the solver';
+  if (!b) { $('solverInfo').textContent = 'It starts slowly, at 2 turns a second. The three pieces it is moving light up in pink. Use the bar on the cube to pause, step, change speed or finish.'; return; }
+  if (b.thinking) { $('solverInfo').textContent = 'Reading the sticker colours and working out a solution…'; return; }
+  $('solverInfo').textContent = `${b.total.toLocaleString()} turns in ${b.stages.length} stages, worked out in ${b.ms.toLocaleString()} ms. ` +
+    (b.finished ? (b.finished === 'stopped' ? 'Stopped.' : 'Finished.') : 'The live turn count is on the cube.');
+  for (const stg of b.stages) {
+    const li = document.createElement('li');
+    const cur = !b.finished && b.curSeg >= stg.start && b.curSeg <= stg.end;
+    const done = b.finished === 'done' || (!b.finished && b.curSeg > stg.end);
+    li.className = cur ? 'now' : done ? 'done' : '';
+    const name = document.createElement('span');
+    name.textContent = stg.kind === 'parity' ? 'Parity fix (makes the rest possible with 3-cycles)' : stg.name;
+    const cnt = document.createElement('span'); cnt.className = 'cnt';
+    if (stg.kind === 'parity') cnt.textContent = `${stg.turns} turn${stg.turns > 1 ? 's' : ''}`;
+    else cnt.textContent = cur ? `${b.curSeg - stg.start + 1} of ${stg.count}` : `${stg.count} cycles`;
+    li.append(name, cnt);
+    list.append(li);
+  }
+}
+
+// ---------- playback bar ----------
+function showPlaybar() { $('playbar').hidden = false; $('hint').hidden = true; updatePlaybar(); }
+function hidePlaybar() { $('playbar').hidden = true; $('hint').hidden = false; }
+function speedLabel(s) { return s < 1 ? '1 turn / 2 s' : s === 1 ? '1 turn/s' : `${s} turns/s`; }
+function updatePlaybar() {
+  $('pbPause').textContent = paused ? 'Resume' : 'Pause';
+  $('pbStep').hidden = !paused;
+  $('pbSpeed').value = String(speedIdx);
+  $('pbSpeedOut').textContent = speedLabel(SPEEDS[speedIdx]);
+  let canFinish = false;
+  if (phase === 'botsolving') canFinish = !!(bot && !bot.thinking);
+  else if (phase === 'aiplaying') canFinish = queue.some(q => q.kind === 'ai') || !!(anim && anim.items[0].kind === 'ai');
+  $('pbFinish').disabled = !canFinish;
+  $('pbFinish').textContent = phase === 'aiplaying' ? 'Finish these moves' : 'Finish now';
+}
+
+// ---------- step-by-step guide ----------
+function renderGuide() {
+  const g = GUIDES[n];
+  $('guideTitle').textContent = g.title;
+  $('guideIntro').textContent = g.intro;
+  const notes = $('notationList');
+  if (!notes.childElementCount) for (const t of GUIDE_NOTATION) { const li = document.createElement('li'); li.textContent = t; notes.append(li); }
+  const list = $('guideSteps');
+  list.textContent = '';
+  g.steps.forEach((st, i) => {
+    const li = document.createElement('li');
+    const det = document.createElement('details');
+    if (i === 0) det.open = true;
+    const sum = document.createElement('summary');
+    const num = document.createElement('span'); num.className = 'num'; num.textContent = String(i + 1).padStart(2, '0');
+    const tt = document.createElement('span'); tt.textContent = st.h;
+    sum.append(num, tt);
+    const body = document.createElement('div'); body.className = 'body';
+    for (const p of st.p) { const el = document.createElement('p'); el.textContent = p; body.append(el); }
+    for (const [alg, note] of (st.algs || [])) {
+      const box = document.createElement('div'); box.className = 'alg';
+      const row = document.createElement('div'); row.className = 'alg-row';
+      const code = document.createElement('code'); code.textContent = alg;
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn small showme'; btn.textContent = 'Show me';
+      btn.setAttribute('aria-label', 'Show me ' + alg);
+      btn.addEventListener('click', () => showMe(alg));
+      row.append(code, btn);
+      const nt = document.createElement('p'); nt.className = 'alg-note'; nt.textContent = note;
+      box.append(row, nt);
+      body.append(box);
+    }
+    det.append(sum, body);
+    li.append(det);
+    list.append(li);
+  });
+  refreshButtons();
+}
+function showMe(alg) {
+  if (locked()) return;
+  const p = N.parse(alg, viewFrame());
+  if (p.errors.length) { infoMsg = 'That algorithm does not fit this cube size.'; setStatus(); return; }
+  for (const tk of p.tokens) {
+    const group = ++groupSeq;
+    for (const m of tk.turns) userMove(m, { group, dur: 320, note: tk.text });
+  }
+}
+
+// ---------- AI players ----------
+function aiName(who) { return who === 'claude' ? 'Claude' : 'Gemini'; }
+function setAIStatus(t) { $('aiStatus').textContent = t; }
+function aiLog(entry) {
+  if (!ai) return;
+  ai.log.push(entry);
+  if (ai.log.length > 80) ai.log.shift();
+  renderAILog();
+}
+function renderAILog() {
+  const ol = $('aiLog');
+  ol.textContent = '';
+  if (!ai) return;
+  for (const e of ai.log) {
+    const li = document.createElement('li');
+    if (e.kind === 'error') li.className = 'err';
+    if (e.kind === 'end') li.className = 'end';
+    const who = document.createElement('span'); who.className = 'who'; who.textContent = e.title ? e.title + ': ' : '';
+    li.append(who, document.createTextNode(e.text || ''));
+    if (e.moves) { const mv = document.createElement('span'); mv.className = 'mv'; mv.textContent = e.moves; li.append(mv); }
+    ol.append(li);
+  }
+  ol.scrollTop = ol.scrollHeight;
+}
+function aiResults() { const r = store.get(K.aiRes, {}); return r && typeof r === 'object' ? r : {}; }
+function recordAIResult(g, solved) {
+  const all = aiResults(), k = g.who + ':' + g.n;
+  const r = all[k] && typeof all[k] === 'object' ? all[k] : { games: 0, best: 0, solved: 0, fewest: null };
+  r.games++; r.best = Math.max(r.best || 0, g.bestPct);
+  if (solved) { r.solved++; r.fewest = r.fewest == null ? g.used : Math.min(r.fewest, g.used); }
+  all[k] = r; store.set(K.aiRes, all);
+}
+function renderAI() {
+  $('aiPickClaude').setAttribute('aria-checked', String(aiWho === 'claude'));
+  $('aiPickGemini').setAttribute('aria-checked', String(aiWho === 'gemini'));
+  $('aiClaudeBox').hidden = aiWho !== 'claude';
+  $('aiGeminiBox').hidden = aiWho !== 'gemini';
+  const cn = $('claudeNote');
+  if (claudeState === 'checking') { cn.textContent = 'Checking whether Claude is available here…'; cn.className = 'note'; }
+  else if (claudeState === 'ready') { cn.textContent = 'Claude plays with your own Claude account (no API key). Each turn uses some of your Claude usage. The first time, claude.ai asks you to allow this page.'; cn.className = 'note'; }
+  else if (claudeState === 'denied') { cn.textContent = 'Claude is not allowed for this page in this view. You can change that in the artifact’s Permissions menu, then reload.'; cn.className = 'note warn'; }
+  else { cn.textContent = 'Claude can play only when this game is open on claude.ai, where it uses your Claude account. Here, Claude is not available.'; cn.className = 'note warn'; }
+  const gn = $('geminiNote');
+  if (geminiBlocked) { gn.textContent = 'Gemini cannot be reached from inside claude.ai: this page is not allowed to contact other websites. Open the game as a file on your computer (for example the copy in your GitHub project) to play with Gemini.'; gn.className = 'note warn'; }
+  else { gn.textContent = 'Gemini plays through your own Gemini API key. The key goes only from this browser to Google, and requests may cost money on your Google account.'; gn.className = 'note'; }
+  for (const id of ['geminiKey', 'geminiRemember', 'geminiModel', 'geminiLoad']) $(id).disabled = geminiBlocked;
+  if (ai) {
+    $('aiStart').textContent = ai.startPct + '%';
+    $('aiNow').textContent = ai.pct + '%';
+    $('aiBest').textContent = ai.bestPct + '%';
+    $('aiMoves').textContent = `${ai.used}/${ai.budget}`;
+  } else for (const id of ['aiStart', 'aiNow', 'aiBest', 'aiMoves']) $(id).textContent = '–';
+  const res = aiResults(), parts = [];
+  for (const w of ['claude', 'gemini']) {
+    const r = res[w + ':' + n];
+    if (r && r.games) parts.push(`${aiName(w)}: ${r.games} game${r.games > 1 ? 's' : ''}, best ${r.best}%` + (r.solved ? `, solved ${r.solved}× (fewest ${r.fewest} moves)` : ', not solved yet'));
+  }
+  $('aiHistory').textContent = parts.length ? `Past games on ${n}×${n} in this browser. ${parts.join('. ')}.` : '';
+  refreshButtons();
+}
+function aiAvailable(who) {
+  if (who === 'claude') return claudeState === 'ready';
+  return !geminiBlocked;
+}
+function aiPrompt(mode) {
+  const g = ai, left = g.budget - g.used, pr = progress();
+  const hist = g.history.length ? (g.history.length > 60 ? '(earlier moves omitted) ' + g.history.slice(-60).join(' ') : g.history.join(' ')) : 'none yet';
+  const L = [];
+  L.push(`You are playing a ${n}×${n} twisty cube puzzle in a browser game. Goal: make every side one solid colour. You have ${left} moves left in this game.`);
+  L.push('', 'HOW THE CUBE IS SHOWN',
+    'Fixed viewpoint: U = up, D = down, F = front, B = back, R = right, L = left.',
+    'Colours: W white, Y yellow, R red, O orange, G green, B blue (these are colour letters, not moves).',
+    `Each side is a grid of ${n} rows of ${n} letters:`,
+    '- F, R, B, L: as seen looking straight at that side from outside; the first row touches U.',
+    '- U: as seen from above; the first row touches B, the last row touches F, the left column touches L.',
+    '- D: as seen from below; the first row touches F, the last row touches B, the left column touches L.');
+  L.push('', 'MOVES (always relative to this fixed viewpoint)',
+    "- R, L, U, D, F, B turn that outer side a quarter turn clockwise, as seen looking at that side. Add ' for counter-clockwise (R') or 2 for a half turn (R2).");
+  if (n > 3) L.push(`- A number in front turns only that inner layer, counted from that side: 2R is the 2nd layer from the right, turning like R. Inner layers are numbered 2 to ${n - 1}.`,
+    '- w turns several outer layers together: Rw = R and 2R; 3Rw = the outer three layers.');
+  if (n % 2) L.push('- M, E, S turn the middle layer: M turns like L, E like D, S like F.');
+  L.push('- x, y, z turn the whole cube (like R, U, F). They count as moves and move colours to other sides.',
+    '- Use capital letters only and separate moves with spaces.');
+  L.push('', 'CURRENT CUBE', stateText(), '',
+    `Progress: ${pr.pct}% of stickers match the main colour of their side (start of this game: ${g.startPct}%, best so far: ${g.bestPct}%).`,
+    `Your moves so far this game: ${hist}.`);
+  if (mode === 'tools') L.push('', 'HOW TO PLAY',
+    `Call the turn tool to play moves, up to ${AI_MAX_PER_ROUND} moves per call. Each call returns the new cube and your progress. Make at most ${AI_ROUNDS} calls in this reply, then finish with one or two short sentences: what you did and what you plan next. Think about exactly which stickers each move changes before you send it.`);
+  else L.push('', 'YOUR ANSWER',
+    `Think about exactly which stickers each move changes. Then reply with only one JSON object and no other text: {"moves": "<up to ${AI_MAX_PER_ROUND} moves separated by spaces>", "note": "<one short sentence: what these moves are meant to do>"}`);
+  return L.join('\n');
+}
+function waitAIDrain(signal) {
+  return new Promise(resolve => {
+    if (!queue.some(q => q.kind === 'ai') && !(anim && anim.items[0].kind === 'ai')) { resolve(); return; }
+    aiDrain = { resolve };
+    if (signal) signal.addEventListener('abort', () => { if (aiDrain) { const d = aiDrain; aiDrain = null; d.resolve(); } }, { once: true });
+  });
+}
+// play the AI's moves on the cube, watch them at the chosen speed, report back
+async function aiPlay(g, movesText, signal) {
+  if (g !== ai || g.finished || (signal && signal.aborted)) throw new Error('The game was stopped.');
+  const parsed = N.parse(movesText, IDENT);
+  const skipped = parsed.errors.slice();
+  let tokens = parsed.tokens;
+  if (tokens.length > AI_MAX_PER_ROUND) { skipped.push(...tokens.slice(AI_MAX_PER_ROUND).map(t => t.text + ' (over the limit)')); tokens = tokens.slice(0, AI_MAX_PER_ROUND); }
+  const left = g.budget - g.used;
+  if (tokens.length > left) { skipped.push(...tokens.slice(left).map(t => t.text + ' (no moves left)')); tokens = tokens.slice(0, left); }
+  const before = g.pct;
+  const idle = !queue.length && !anim;
+  for (const tk of tokens) {
+    const group = ++groupSeq;
+    for (const m of tk.turns) queue.push({ kind: 'ai', group, move: m });
+  }
+  if (idle) nextPacedAt = performance.now();
+  g.used += tokens.length;
+  g.history.push(...tokens.map(t => t.text));
+  updatePlaybar(); renderAI(); setChip();
+  if (tokens.length) await waitAIDrain(signal);
+  if (g !== ai) throw new Error('The game was stopped.');
+  const pr = progress();
+  g.pct = pr.pct; g.bestPct = Math.max(g.bestPct, pr.pct);
+  const solved = isSolved();
+  aiLog({ kind: 'round', title: `${aiName(g.who)}, round ${++g.rounds}`, text: `${before}% → ${pr.pct}%` + (skipped.length ? ` · skipped: ${skipped.slice(0, 6).join(', ')}` : ''), moves: tokens.map(t => t.text).join(' ') || '(no valid moves)' });
+  updatePlaybar(); renderAI(); setChip();
+  return { played: tokens.map(t => t.text).join(' '), skipped, moves_left: g.budget - g.used, progress_percent: pr.pct, solved, cube: stateText() };
+}
+function claudeErrorText(e) {
+  switch (e && e.code) {
+    case 'not_granted': return 'Claude was not allowed for this page, so it cannot play here.';
+    case 'sampling_disabled': case 'not_declared': case 'capability_disabled': case 'capability_removed': return 'Claude is not available for your account in this view.';
+    case 'rate_limited': return e.reason === 'usage_limit' ? 'You have reached your Claude usage limit. Try again later.' : 'Claude has too many requests right now. Wait a little, then press Continue.';
+    case 'session_expired': return 'Your claude.ai session expired. Sign in again, then press Continue.';
+    case 'refused': return 'Claude declined to answer this time. Press Continue to try again.';
+    case 'invalid_json': return "Claude's answer was not in the format the game needs. Press Continue to try again.";
+    case 'tools_unavailable': return 'This view cannot give Claude the turn tool, so it will play in simple mode. Press Continue.';
+    case 'empty_completion': return 'Claude sent an empty answer. Press Continue to try again.';
+    default: return 'Something went wrong talking to Claude. Press Continue to try again.';
+  }
+}
+async function claudeTurn(g, signal) {
+  const tier = $('claudeTier').value;
+  const useTools = !!(sampleLimits && sampleLimits.tools) && !toolsBroken;
+  setAIStatus('Claude is thinking… The first time, claude.ai asks you to allow this page to use Claude.');
+  const thought = $('aiThought');
+  if (useTools) {
+    let calls = 0;
+    const tools = [{
+      name: 'turn',
+      description: `Play up to ${AI_MAX_PER_ROUND} moves on the cube, in order. Returns the new cube state, your progress, the moves left and any moves that were skipped.`,
+      inputSchema: { type: 'object', properties: { moves: { type: 'string', description: `Up to ${AI_MAX_PER_ROUND} moves separated by spaces, for example "R U R' U'"` } }, required: ['moves'] },
+      execute: async (input, ctx) => {
+        if (signal.aborted || g.finished) throw new Error('The game was stopped.');
+        if (++calls > AI_ROUNDS) throw new Error(`You already used ${AI_ROUNDS} turn calls in this reply. Stop calling the tool and write your short summary.`);
+        if (g.used >= g.budget) throw new Error('No moves are left in this game. Write your short summary.');
+        setAIStatus(`Claude is playing (call ${calls} of up to ${AI_ROUNDS})…`);
+        const r = await aiPlay(g, String(input && input.moves != null ? input.moves : ''), ctx && ctx.signal);
+        if (!r.solved && g.used < g.budget) setAIStatus('Claude is thinking…');
+        return r;
+      },
+    }];
+    const res = await sampleFn(aiPrompt('tools'), {
+      tools, signal, modelTier: tier,
+      onText: ({ text }) => { thought.hidden = false; thought.textContent = text.slice(-400); },
+    });
+    const summary = String(res.text || '').trim().split(/\n\s*\n/).pop();
+    if (summary) aiLog({ kind: 'note', title: 'Claude says', text: summary.slice(0, 600) });
+    if (res.modelTierApplied && res.modelTierApplied !== tier) aiLog({ kind: 'note', title: 'Note', text: `Your plan answered with the ${res.modelTierApplied} model instead.` });
+  } else {
+    const data = await sampleFn.json(aiPrompt('json'), { signal, modelTier: tier, cache: false });
+    const mv = data && (typeof data.moves === 'string' ? data.moves : Array.isArray(data.moves) ? data.moves.join(' ') : '');
+    if (data && data.note) aiLog({ kind: 'note', title: 'Claude says', text: String(data.note).slice(0, 400) });
+    await aiPlay(g, mv || '', signal);
+  }
+}
+function parseLooseJSON(text) {
+  const t = String(text || '').trim();
+  try { return JSON.parse(t); } catch (e) {}
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) { try { return JSON.parse(fence[1]); } catch (e) {} }
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+  return null;
+}
+function userError(msg) { const e = new Error(msg); e.user = true; return e; }
+function geminiError(status, body, key) {
+  let msg = body && body.error && body.error.message ? String(body.error.message) : '';
+  if (key) msg = msg.split(key).join('•••');
+  msg = msg.slice(0, 220);
+  if (status === 400 && /api key/i.test(msg)) return userError('Google did not accept this API key. Check it and try again.');
+  if (status === 400) return userError('Gemini rejected the request: ' + (msg || 'bad request') + '.');
+  if (status === 401 || status === 403) return userError('This API key cannot use the Gemini API or this model' + (msg ? ` (${msg})` : '') + '.');
+  if (status === 404) return userError('That model was not found. Press Load my models and pick another.');
+  if (status === 429) return userError('Gemini says you are over your quota or rate limit. Wait a bit, then press Continue.');
+  if (status >= 500) return userError('Gemini is busy right now. Try again in a minute.');
+  return userError(`Gemini error ${status}${msg ? ': ' + msg : ''}.`);
+}
+async function geminiFetch(url, init, key, signal, timeoutMs) {
+  const ctl = new AbortController();
+  const onAbort = () => ctl.abort();
+  if (signal) { if (signal.aborted) ctl.abort(); else signal.addEventListener('abort', onAbort); }
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, Object.assign({}, init, { signal: ctl.signal, headers: Object.assign({ 'x-goog-api-key': key }, init.headers || {}) }));
+    let body = null;
+    try { body = await res.json(); } catch (e) {}
+    if (!res.ok) throw geminiError(res.status, body, key);
+    return body;
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      if (signal && signal.aborted) throw e;
+      throw userError('Gemini took too long to answer. Press Continue to try again.');
+    }
+    if (e instanceof TypeError) throw userError('Could not reach Gemini. Check your internet connection and try again.');
+    throw e;
+  } finally { clearTimeout(timer); if (signal) signal.removeEventListener('abort', onAbort); }
+}
+function geminiModelId() { return String($('geminiModel').value || '').replace(/^models\//, '').trim(); }
+async function geminiAsk(key, model, prompt, signal) {
+  const body = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+  }, key, signal, 120000);
+  const cand = body && body.candidates && body.candidates[0];
+  if (!cand) {
+    const why = body && body.promptFeedback && body.promptFeedback.blockReason;
+    throw userError('Gemini sent no answer' + (why ? ` (blocked: ${why})` : '') + '. Press Continue to try again.');
+  }
+  const text = ((cand.content && cand.content.parts) || []).filter(p => p && !p.thought && typeof p.text === 'string').map(p => p.text).join('');
+  const obj = parseLooseJSON(text);
+  if (!obj || typeof obj !== 'object') throw userError("Gemini's answer was not the JSON the game asked for. Press Continue to try again.");
+  return obj;
+}
+async function geminiTurn(g, signal) {
+  const key = $('geminiKey').value.trim();
+  if (!key) throw userError('Paste your Gemini API key first.');
+  const model = geminiModelId();
+  if (!model) throw userError('Choose a Gemini model first (press Load my models).');
+  for (let r = 1; r <= AI_ROUNDS; r++) {
+    if (signal.aborted || g.finished || isSolved() || g.used >= g.budget) break;
+    setAIStatus(`Gemini is thinking (round ${r} of ${AI_ROUNDS})…`);
+    const obj = await geminiAsk(key, model, aiPrompt('json'), signal);
+    if (obj.note) aiLog({ kind: 'note', title: 'Gemini says', text: String(obj.note).slice(0, 400) });
+    const mv = typeof obj.moves === 'string' ? obj.moves : Array.isArray(obj.moves) ? obj.moves.join(' ') : '';
+    setAIStatus(`Gemini is playing (round ${r} of ${AI_ROUNDS})…`);
+    await aiPlay(g, mv, signal);
+  }
+}
+async function loadGeminiModels() {
+  if (geminiBlocked) return;
+  const key = $('geminiKey').value.trim();
+  if (!key) { setAIStatus('Paste your Gemini API key first.'); return; }
+  const sel = $('geminiModel'), btn = $('geminiLoad');
+  btn.disabled = true; setAIStatus('Loading your Gemini models…');
+  try {
+    const body = await geminiFetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { method: 'GET' }, key, null, 30000);
+    const skip = /embed|imagen|veo|tts|audio|image|live|aqa|robotics|computer-use|learnlm/i;
+    const models = ((body && body.models) || [])
+      .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+      .map(m => ({ id: String(m.name || '').replace(/^models\//, ''), label: String(m.displayName || '') }))
+      .filter(m => m.id && !skip.test(m.id));
+    if (!models.length) throw userError('No text models were found for this key.');
+    models.sort((a, b) => (b.id.includes('flash') - a.id.includes('flash')) || (a.id < b.id ? 1 : -1));
+    const saved = store.get(K.gModel, '');
+    sel.textContent = '';
+    for (const m of models) { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label && m.label !== m.id ? `${m.label} (${m.id})` : m.id; sel.append(o); }
+    const pick = models.find(m => m.id === saved) || models.find(m => m.id === 'gemini-flash-latest') || models.find(m => /flash/.test(m.id) && !/lite/.test(m.id)) || models[0];
+    sel.value = pick.id; store.set(K.gModel, pick.id);
+    setAIStatus(`Loaded ${models.length} models. ${pick.id} is selected.`);
+  } catch (e) {
+    setAIStatus(e && e.user ? e.message : 'Could not load the model list.');
+  } finally { btn.disabled = geminiBlocked; refreshButtons(); }
+}
+async function aiGo() {
+  if (aiBusy) return;
+  const who = aiWho;
+  if (!aiAvailable(who)) { renderAI(); return; }
+  if (who === 'gemini' && (!$('geminiKey').value.trim() || !geminiModelId())) {
+    setAIStatus(!$('geminiKey').value.trim() ? 'Paste your Gemini API key first.' : 'Choose a Gemini model first (press Load my models).');
+    return;
+  }
+  const continuing = ai && !ai.finished && ai.who === who && ai.n === n && phase === 'aiplaying';
+  if (!continuing) {
+    if (locked()) return;
+    queue.length = 0;
+    if (anim) finishAnim();
+    if (isSolved()) { setAIStatus('The cube is already solved. Press New scramble (or turn it yourself) first.'); return; }
+    const timed = phase === 'ready' || phase === 'solving';
+    const prevPhase = phase, prevDnf = dnf, prevHist = userHist;
+    if (timed) dnf = true;
+    hideToast(); pendingDepth = 0; userHist = []; infoMsg = '';
+    const pr = progress();
+    ai = { who, n, budget: Number($('aiBudget').value) || 150, used: 0, rounds: 0, startPct: pr.pct, pct: pr.pct, bestPct: pr.pct, history: [], log: [], finished: false, timed, ctl: null, prevPhase, prevDnf, prevHist };
+    phase = 'aiplaying'; paused = false; stepReq = false;
+    resetView();
+    aiLog({ kind: 'note', title: aiName(who), text: `New game on the ${n}×${n}, ${ai.budget} moves. Start: ${pr.pct}% of stickers match.` });
+    showPlaybar(); setStatus(); setChip();
+  }
+  const g = ai;
+  aiBusy = true; g.ctl = new AbortController();
+  $('aiThought').hidden = true; $('aiThought').textContent = '';
+  refreshButtons(); renderAI();
+  let failed = false;
+  try {
+    if (who === 'claude') await claudeTurn(g, g.ctl.signal);
+    else await geminiTurn(g, g.ctl.signal);
+  } catch (e) {
+    if (g === ai && !g.finished && !(g.ctl && g.ctl.signal.aborted)) {
+      failed = true;
+      let text;
+      if (who === 'claude' && e && e.code) {
+        text = claudeErrorText(e);
+        if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(e.code)) claudeState = 'denied';
+        if (e.code === 'tools_unavailable') toolsBroken = true;
+      } else text = e && e.user ? e.message : 'Something went wrong: ' + (e && e.message ? e.message : e);
+      aiLog({ kind: 'error', title: 'Problem', text });
+      setAIStatus(text);
+    }
+  } finally {
+    aiBusy = false;
+    $('aiThought').hidden = true;
+    if (g === ai && !g.finished) {
+      if (isSolved()) aiFinish('solved');
+      else if (g.used >= g.budget) aiFinish('budget');
+      else if (claudeState === 'denied' && who === 'claude') aiFinish('denied');
+      else if (!failed) setAIStatus(`${aiName(who)} has used ${g.used} of ${g.budget} moves (now ${g.pct}%, best ${g.bestPct}%). Press Continue for another turn, or Stop.`);
+    }
+    refreshButtons(); renderAI(); updatePlaybar();
+  }
+}
+function aiStop() {
+  if (!ai || ai.finished) return;
+  try { if (ai.ctl) ai.ctl.abort(); } catch (e) {}
+  aiFinish('stopped');
+}
+function aiFinish(reason) {
+  const g = ai;
+  if (!g || g.finished) return;
+  g.finished = true; g.reason = reason;
+  queue = queue.filter(q => q.kind !== 'ai');
+  if (anim && anim.items[0].kind === 'ai') finishAnim();
+  if (aiDrain) { const d = aiDrain; aiDrain = null; d.resolve(); }
+  hidePlaybar(); paused = false;
+  const pr = progress(); g.pct = pr.pct; g.bestPct = Math.max(g.bestPct, pr.pct);
+  const name = aiName(g.who), solvedNow = reason === 'solved' || isSolved();
+  let msg;
+  if (!g.used && !solvedNow) {
+    // the AI never moved: give your timed attempt back
+    if (phase === 'aiplaying') { phase = g.prevPhase; dnf = g.prevDnf; userHist = g.prevHist || []; }
+    msg = reason === 'denied' ? `${name} cannot play here: it is not allowed for this page or your account.` : `${name} did not play any moves.`;
+    infoMsg = phase === 'free' ? msg : '';
+  } else {
+    if (phase === 'aiplaying') phase = 'free';
+    if (solvedNow) {
+      applied = [];
+      msg = `${name} solved the ${n}×${n} in ${g.used} moves!`;
+      showToast('Solved', `${name} · ${g.used} moves`);
+      startSpin();
+    } else {
+      const how = reason === 'stopped' ? ' before you stopped it' : reason === 'denied' ? ', then lost access' : '';
+      msg = `${name} used ${g.used} of ${g.budget} moves${how}. Best: ${g.bestPct}% of stickers matching (it started at ${g.startPct}%). Not solved.`;
+    }
+    if (g.timed) msg += ' Your timed attempt counts as DNF.';
+    infoMsg = msg;
+    recordAIResult(g, solvedNow);
+  }
+  aiLog({ kind: 'end', title: 'Result', text: msg });
+  setAIStatus(msg);
+  setStatus(); setChip(); updateStats(); refreshButtons(); renderAI();
+}
+
+// ---------- UI ----------
+function fmt(ms) {
+  const cs = Math.floor(ms / 10), m = Math.floor(cs / 6000), s = Math.floor(cs / 100) % 60, c = cs % 100;
+  return (m ? m + ':' + String(s).padStart(2, '0') : String(s)) + '.' + String(c).padStart(2, '0');
+}
+let shownTime = '';
+function renderClock(now) {
+  let text, cls = '';
+  if (phase === 'solving') text = fmt(now - startT);
+  else if (dnf) { text = 'DNF'; cls = 'is-dnf'; }
+  else if (finalMs != null) { text = fmt(finalMs); cls = phase === 'solved' ? 'is-done' : ''; }
+  else text = '0.00';
+  const key = text + cls;
+  if (key !== shownTime) {
+    const el = $('time');
+    el.textContent = text;
+    el.className = 'time' + (cls ? ' ' + cls : '');
+    shownTime = key;
+  }
+}
+function setStatus() {
+  const label = `${n}×${n}`;
+  let s;
+  switch (phase) {
+    case 'ready': s = `${label} scrambled. The clock starts on your first turn.`; break;
+    case 'solving': s = 'Solving. The clock stops when every side is one colour.'; break;
+    case 'solved': s = lastBest ? `Solved in ${moves} moves. New best for ${label}.` : `Solved in ${moves} moves.`; break;
+    case 'rewinding': s = 'Playing every turn backwards…'; break;
+    case 'botsolving': s = bot && bot.thinking ? 'The solver is reading the sticker colours and working out a solution…' : 'The solver is playing its solution. Use the bar on the cube to pause, step, speed up or finish.'; break;
+    case 'aiplaying': s = `${ai ? aiName(ai.who) : 'The AI'} is playing. Your turns are paused until it finishes or you press Stop.`; break;
+    default:
+      if (infoMsg) s = infoMsg;
+      else s = dnf ? 'Back to solved. This attempt counts as DNF.' : 'Free turning, not timed. Press New scramble for a timed solve.';
+  }
+  $('status').textContent = s;
+}
+function ao5(list) {
+  if (list.length < 5) return null;
+  const t = list.slice(-5).map(x => x.ms).sort((a, b) => a - b);
+  return (t[1] + t[2] + t[3]) / 3;
+}
+function updateStats() {
+  $('statMoves').textContent = String(moves);
+  $('statTps').textContent = finalMs ? (moves / (finalMs / 1000)).toFixed(2) : '–';
+  const list = Array.isArray(solves[String(n)]) ? solves[String(n)] : [];
+  $('statBest').textContent = list.length ? fmt(Math.min(...list.map(x => x.ms))) : '–';
+  const a = ao5(list);
+  $('statAo5').textContent = a == null ? `${list.length}/5` : fmt(a);
+}
+function setChip() {
+  const el = $('chipMove');
+  if (phase === 'botsolving' && bot) {
+    if (bot.thinking) { el.textContent = 'Solver · working it out'; return; }
+    const sg = bot.segs[bot.curSeg];
+    el.innerHTML = `Solver · <b>${bot.done}</b>/${bot.total}` + (sg ? ` · ${sg.kind === 'parity' ? 'parity' : sg.name.toLowerCase()}` : '');
+  } else if (phase === 'aiplaying' && ai) {
+    el.innerHTML = `${aiName(ai.who)} · <b>${ai.used}</b>/${ai.budget} moves · ${ai.pct}%`;
+  } else if (pendingDepth) el.innerHTML = `Layer <b>${pendingDepth}</b> · now press R U F L D or B`;
+  else if (lastNote) el.innerHTML = `Last turn <b>${lastNote}</b>`;
+  else el.textContent = 'No turns yet';
+}
+function refreshButtons() {
+  $('btnUndo').disabled = locked() || phase === 'solved' || !userHist.length;
+  $('btnGiveUp').disabled = locked() || phase === 'solved' || (phase === 'free' && !applied.length && !queue.length && !anim);
+  $('btnSolve').disabled = locked();
+  for (const b of document.querySelectorAll('.showme')) b.disabled = locked();
+  const go = $('aiGo'), stop = $('aiStop');
+  const continuing = ai && !ai.finished && ai.who === aiWho && phase === 'aiplaying';
+  go.textContent = aiBusy ? `${aiName(aiWho)} is playing…` : continuing ? `Continue (${aiName(aiWho)})` : `Let ${aiName(aiWho)} play`;
+  go.disabled = aiBusy || !aiAvailable(aiWho) || (locked() && !continuing);
+  stop.disabled = !(ai && !ai.finished);
+  $('aiPickClaude').disabled = $('aiPickGemini').disabled = aiBusy || phase === 'aiplaying';
+}
+function syncSizeButtons() {
+  for (const b of document.querySelectorAll('.sizes .seg button')) b.setAttribute('aria-pressed', String(+b.dataset.n === n));
+}
+function showToast(big, small) {
+  const el = $('toast');
+  el.textContent = '';
+  const pip = document.createElement('i'); pip.className = 'pip'; pip.setAttribute('aria-hidden', 'true');
+  const s = document.createElement('strong'); s.textContent = big;
+  const sp = document.createElement('span'); sp.textContent = small;
+  el.append(pip, s, sp);
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 6000);
+}
+function hideToast() { $('toast').hidden = true; }
+function startSpin() { if (!reduceMotion) spin = { t0: performance.now(), dur: 1500, from: theta }; }
+
+// ---------- tabs ----------
+const TABS = ['play', 'learn', 'solver', 'ai'];
+function selectTab(name, focus) {
+  if (!TABS.includes(name)) name = 'play';
+  for (const t of TABS) {
+    const b = $('tab-' + t), on = t === name;
+    b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on ? 0 : -1;
+    $('panel-' + t).hidden = !on;
+  }
+  if (focus) $('tab-' + name).focus();
+  store.set(K.tab, name);
+}
+for (const t of TABS) $('tab-' + t).addEventListener('click', () => selectTab(t));
+document.querySelector('.tabs').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  const cur = TABS.findIndex(t => $('tab-' + t).getAttribute('aria-selected') === 'true');
+  e.preventDefault(); e.stopPropagation();
+  selectTab(TABS[(cur + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length], true);
+});
+
+// ---------- camera ----------
+function fitDist() {
+  const R = n * Math.sqrt(3) / 2;
+  const halfV = THREE.MathUtils.degToRad(camera.fov / 2);
+  const half = Math.min(halfV, Math.atan(Math.tan(halfV) * camera.aspect));
+  dist = R / Math.sin(half) * 1.24;
+}
+function placeCamera() {
+  camera.position.set(dist * Math.sin(phi) * Math.sin(theta), dist * Math.cos(phi), dist * Math.sin(phi) * Math.cos(theta));
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
+}
+function resetView() { theta = 0.6; phi = 1.02; spin = null; fitDist(); placeCamera(); }
+function resize() {
+  const r = stage.getBoundingClientRect();
+  cw = Math.max(1, r.width); ch = Math.max(1, r.height);
+  renderer.setSize(cw, ch, false);
+  camera.aspect = cw / ch;
+  camera.updateProjectionMatrix();
+  fitDist(); placeCamera();
+}
+
+// ---------- pointer ----------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pick(x, y) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects(pickables, false);
+  if (!hits.length) return null;
+  const h = hits[0], cubie = h.object.userData.cubie;
+  const nrm = (h.object.userData.face !== undefined ? FACE_DIR[h.object.userData.face].clone() : h.face.normal.clone())
+    .applyQuaternion(cubie.quaternion);
+  const Nn = bestAxis(nrm, -1);
+  if (Math.abs(cubie.position.getComponent(Nn.i) * Nn.s * 2 - (n - 1)) > 0.1) return null; // an inside face
+  return { cubie, N: Nn, point: h.point.clone() };
+}
+function toScreen(v) {
+  const p = v.clone().project(camera);
+  return { x: (p.x + 1) / 2 * cw, y: (1 - p.y) / 2 * ch };
+}
+function dragMove(hit, tx, ty) {
+  const len = Math.hypot(tx, ty), p0 = toScreen(hit.point);
+  let best = null;
+  for (let i = 0; i < 3; i++) {
+    if (i === hit.N.i) continue;
+    const q = hit.point.clone();
+    q.setComponent(i, q.getComponent(i) + 0.5);
+    const p1 = toScreen(q), vx = p1.x - p0.x, vy = p1.y - p0.y, vl = Math.hypot(vx, vy);
+    if (vl < 1e-6) continue;
+    const dot = (tx * vx + ty * vy) / (vl * len);
+    if (!best || Math.abs(dot) > Math.abs(best.dot)) best = { i, dot };
+  }
+  if (!best) return null;
+  const r = crossAx(hit.N, { i: best.i, s: best.dot >= 0 ? 1 : -1 }); // turning about N × drag moves the sticker along the drag
+  return { a: r.i, l2: Math.round(hit.cubie.position.getComponent(r.i) * 2), d: r.s };
+}
+let drag = null;
+canvas.addEventListener('pointerdown', e => {
+  if (drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  const hit = locked() ? null : pick(e.clientX, e.clientY);
+  drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, hit, used: false };
+  canvas.classList.add('dragging');
+  spin = null;
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.lx, dy = e.clientY - drag.ly;
+  drag.lx = e.clientX; drag.ly = e.clientY;
+  if (!drag.hit) {
+    theta -= dx * 0.009;
+    phi = Math.min(Math.PI - 0.18, Math.max(0.18, phi - dy * 0.009));
+    placeCamera();
+    return;
+  }
+  if (drag.used) return;
+  const tx = e.clientX - drag.x0, ty = e.clientY - drag.y0;
+  if (Math.hypot(tx, ty) < 10) return;
+  drag.used = true;
+  const m = dragMove(drag.hit, tx, ty);
+  if (m) userMove(m);
+});
+function endDrag(e) {
+  if (drag && e.pointerId === drag.id) { drag = null; canvas.classList.remove('dragging'); }
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+// ---------- keyboard & buttons ----------
+document.addEventListener('keydown', e => {
+  if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
+  const k = e.key;
+  if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (k === 'Backspace') { e.preventDefault(); undo(); return; }
+  if (k === 'Escape') { pendingDepth = 0; setChip(); return; }
+  if (/^[1-9]$/.test(k)) { const d = +k; pendingDepth = d <= n ? d : 0; setChip(); return; }
+  if (k.length === 1 && 'RUFLDB'.includes(k.toUpperCase())) {
+    e.preventDefault();
+    const depth = pendingDepth || 1;
+    pendingDepth = 0;
+    if (depth > n || locked()) { setChip(); return; }
+    userMove(N.layerMove(k.toUpperCase(), depth, e.shiftKey, viewFrame()));
+  }
+});
+$('btnScramble').addEventListener('click', newScramble);
+$('btnUndo').addEventListener('click', undo);
+$('btnGiveUp').addEventListener('click', giveUp);
+$('btnView').addEventListener('click', resetView);
+$('btnSolve').addEventListener('click', startSolver);
+for (const b of document.querySelectorAll('.sizes .seg button')) {
+  b.addEventListener('click', () => {
+    const v = +b.dataset.n;
+    if (v === n && phase !== 'free') return;
+    n = v; store.set(K.size, n); newScramble();
+  });
+}
+$('pbPause').addEventListener('click', () => {
+  paused = !paused;
+  if (!paused) nextPacedAt = performance.now();
+  updatePlaybar();
+});
+$('pbStep').addEventListener('click', () => { if (paused) stepReq = true; });
+$('pbSpeed').addEventListener('input', () => {
+  speedIdx = Math.min(SPEEDS.length - 1, Math.max(0, Number($('pbSpeed').value) | 0));
+  store.set(K.speed, speedIdx);
+  nextPacedAt = Math.min(nextPacedAt, performance.now() + 1000 / SPEEDS[speedIdx]);
+  updatePlaybar();
+});
+$('pbFinish').addEventListener('click', () => {
+  if (phase === 'botsolving') finishBot();
+  else if (phase === 'aiplaying') finishKind('ai');
+  updatePlaybar();
+});
+$('pbStop').addEventListener('click', () => {
+  if (phase === 'botsolving') stopBot();
+  else if (phase === 'aiplaying') aiStop();
+});
+$('aiPickClaude').addEventListener('click', () => { if (aiBusy || phase === 'aiplaying') return; aiWho = 'claude'; store.set(K.aiWho, aiWho); renderAI(); });
+$('aiPickGemini').addEventListener('click', () => { if (aiBusy || phase === 'aiplaying') return; aiWho = 'gemini'; store.set(K.aiWho, aiWho); renderAI(); });
+$('aiGo').addEventListener('click', aiGo);
+$('aiStop').addEventListener('click', aiStop);
+$('claudeTier').addEventListener('change', () => store.set(K.tier, $('claudeTier').value));
+$('aiBudget').addEventListener('change', () => store.set(K.budget, $('aiBudget').value));
+$('geminiLoad').addEventListener('click', loadGeminiModels);
+$('geminiModel').addEventListener('change', () => { store.set(K.gModel, geminiModelId()); refreshButtons(); });
+$('geminiKey').addEventListener('input', () => { if ($('geminiRemember').checked) store.set(K.gKey, $('geminiKey').value.trim()); });
+$('geminiRemember').addEventListener('change', () => {
+  if ($('geminiRemember').checked) store.set(K.gKey, $('geminiKey').value.trim()); else store.del(K.gKey);
+});
+if (window.matchMedia('(max-width: 860px)').matches) $('help').open = false;
+
+// ---------- loop ----------
+function frame(now) {
+  if (spin) {
+    const t = Math.min(1, (now - spin.t0) / spin.dur);
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    theta = spin.from + Math.PI * 2 * e;
+    placeCamera();
+    if (t >= 1) spin = null;
+  }
+  try {
+    if (!anim && queue.length) pump(now);
+    if (anim) stepAnim(now);
+  } catch (err) { // never let one bad turn stop the page
+    console.error(err);
+    if (anim) { try { dropAnim(); } catch (e2) { anim = null; } }
+  }
+  if (aiDrain && !queue.some(q => q.kind === 'ai') && !(anim && anim.items[0].kind === 'ai')) { const d = aiDrain; aiDrain = null; d.resolve(); updatePlaybar(); }
+  renderClock(now);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+// ---------- live-update snapshot ----------
+function snapshot() {
+  const seq = applied.concat(anim ? anim.items.map(it => it.move) : [], queue.map(q => q.move));
+  const pack = list => list.map(m => [m.a, m.l2, m.d]);
+  return {
+    n, seq: pack(seq), scramble: pack(scramble), userHist: pack(userHist),
+    phase: locked() ? 'free' : phase,
+    elapsed: phase === 'solving' ? performance.now() - startT : 0,
+    moves, finalMs, dnf, lastBest, theta, phi,
+  };
+}
+function start(data) {
+  data = data || {};
+  new ResizeObserver(resize).observe(stage);
+  initWorker();
+  selectTab(store.get(K.tab, 'play'));
+  const tier = store.get(K.tier, 'default'); if (['quick', 'default', 'complex'].includes(tier)) $('claudeTier').value = tier;
+  const budget = String(store.get(K.budget, '150')); if (['60', '150', '300'].includes(budget)) $('aiBudget').value = budget;
+  const savedKey = store.get(K.gKey, '');
+  if (savedKey && typeof savedKey === 'string') { $('geminiKey').value = savedKey; $('geminiRemember').checked = true; }
+  const savedModel = store.get(K.gModel, '');
+  if (savedModel && typeof savedModel === 'string') { const o = document.createElement('option'); o.value = savedModel; o.textContent = savedModel; $('geminiModel').textContent = ''; $('geminiModel').append(o); $('geminiModel').value = savedModel; }
+  const unpack = list => (Array.isArray(list) ? list : []).map(x => ({ a: x[0], l2: x[1], d: x[2] }));
+  if (SIZES.includes(data.n) && Array.isArray(data.seq)) {
+    n = data.n; N = makeNotation(n);
+    resize();
+    build(n);
+    applied = unpack(data.seq);
+    for (const m of applied) applyInstant(m);
+    if (isSolved()) applied = [];
+    scramble = unpack(data.scramble);
+    userHist = unpack(data.userHist);
+    phase = ['free', 'ready', 'solving', 'solved'].includes(data.phase) ? data.phase : 'free';
+    moves = data.moves || 0; finalMs = data.finalMs == null ? null : data.finalMs;
+    dnf = !!data.dnf; lastBest = !!data.lastBest;
+    if (phase === 'solving') startT = performance.now() - (data.elapsed || 0);
+    theta = typeof data.theta === 'number' ? data.theta : 0.6;
+    phi = typeof data.phi === 'number' ? data.phi : 1.02;
+    fitDist(); placeCamera();
+    $('scrambleText').textContent = scramble.map(m => noteFor(m, IDENT)).join(' ');
+    $('scrambleLen').textContent = scramble.length ? `· ${scramble.length} random turns` : '';
+    setChip(); updateStats(); setStatus(); syncSizeButtons();
+    renderGuide(); renderSolverPanel(); renderAI(); refreshButtons();
+    warmSolver(n);
+  } else {
+    n = Number(store.get(K.size, 4));
+    if (!SIZES.includes(n)) n = 4;
+    resize();
+    newScramble();
+  }
+  if (inClaude) {
+    window.claude.use('sample').then(fn => {
+      sampleFn = fn || null;
+      claudeState = fn ? 'ready' : 'unavailable';
+      if (fn && typeof fn.limits === 'function') {
+        fn.limits().then(l => {
+          sampleLimits = l || null;
+          const tiers = l && Array.isArray(l.modelTiers) ? l.modelTiers : null;
+          if (tiers) for (const o of $('claudeTier').options) o.disabled = !tiers.includes(o.value);
+          renderAI();
+        }).catch(() => renderAI());
+      }
+      renderAI();
+    }).catch(() => { claudeState = 'unavailable'; renderAI(); });
+  } else claudeState = 'unavailable';
+  renderAI();
+  if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === 'function') window.claude.hot.snapshot(snapshot);
+  requestAnimationFrame(frame);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
