@@ -89,17 +89,30 @@ TESTS = [
 ]
 
 
+USE_THINK_SETTING = True                      # turned off by itself for models without a "thinking" mode
+
+
 def ask(question):
-    body = json.dumps({
+    global USE_THINK_SETTING
+    payload = {
         "model": MODEL,
         "messages": [{"role": "system", "content": RULES}, {"role": "user", "content": question}],
         "stream": False,
-        "think": False,                       # answer directly, without long hidden "thinking"
         "options": {"temperature": 0.2},      # steadier answers for testing
-    }).encode()
-    request = urllib.request.Request(OLLAMA_URL, data=body, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(request, timeout=600) as response:
-        return json.loads(response.read())["message"]["content"].strip()
+    }
+    if USE_THINK_SETTING:
+        payload["think"] = False              # answer directly, without long hidden "thinking"
+    request = urllib.request.Request(OLLAMA_URL, data=json.dumps(payload).encode(),
+                                     headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=600) as response:
+            return json.loads(response.read())["message"]["content"].strip()
+    except urllib.error.HTTPError as error:
+        message = error.read().decode(errors="replace")
+        if USE_THINK_SETTING and "think" in message.lower():   # this model has no thinking mode: ask again without it
+            USE_THINK_SETTING = False
+            return ask(question)
+        raise urllib.error.HTTPError(error.url, error.code, message, error.headers, None) from None
 
 
 def main():
@@ -112,7 +125,7 @@ def main():
         try:
             answer = ask(question)
         except urllib.error.HTTPError as error:
-            sys.exit(f"Ollama said: {error.read().decode(errors='replace')}\n"
+            sys.exit(f"Ollama said: {error.msg}\n"
                      f"Is the model downloaded? Try: ollama pull {MODEL}")
         except (urllib.error.URLError, ConnectionError, TimeoutError) as error:
             sys.exit(f"Can't reach Ollama ({error}). Start it first in another session: ollama serve")
