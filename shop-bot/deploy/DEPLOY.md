@@ -132,7 +132,7 @@ Lock the file and run the tests:
 chmod 600 .env && venv/bin/python -m pytest -q
 ```
 
-You should see `82 passed`. Then go back to root:
+You should see `86 passed`. Then go back to root:
 
 ```
 exit

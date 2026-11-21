@@ -101,3 +101,35 @@ def test_owner_can_see_which_model_answers(monkeypatch):
     assert web.get("/api/owner/assistant").json() == {"assistant": "gemma4:e2b (Ollama, on this computer)"}
     monkeypatch.setattr(config, "AI_PROVIDER", "gemini")
     assert "Google Gemini" in web.get("/api/owner/assistant").json()["assistant"]
+
+
+def test_a_pretend_order_never_reaches_the_customer():
+    fake_claim = "I have placed your order. Your order number is [Order Number] and the total amount is Rs 2,100. Thank you!"
+    bot = brain.OllamaBrain(post=FakeOllama(lambda p: {"role": "assistant", "content": fake_claim}))
+    answer, orders = bot.chat("web", "chat-test-06", "yes")
+    assert orders == [] and database.list_orders() == []
+    assert answer.startswith("Sorry, I couldn't place the order") and "+91 90000 00000" in answer
+
+
+def test_blanks_are_filled_with_the_real_order_number():
+    def model(payload):
+        last = payload["messages"][-1]
+        if last["role"] == "tool":
+            return {"role": "assistant", "content": "Your order number is [Order Number]. Thank you!"}
+        return {"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "place_order", "arguments": ORDER_ARGS}}]}
+
+    answer, orders = brain.OllamaBrain(post=FakeOllama(model)).chat("web", "chat-test-07", "yes")
+    assert answer == f"Your order number is #{orders[0]['id']}. Thank you!"
+
+
+def test_normal_questions_are_not_mistaken_for_order_claims():
+    for text in ("Shall I place the order?", "Paneer Butter Masala (Rs 210) is vegetarian.",
+                 "To order, tell me your name and phone number."):
+        assert brain.honest_reply(text, []) == text
+
+
+def test_gemini_path_is_guarded_too():
+    from test_bot import FakeGemini
+    lie = lambda message, settings: "Order #7 is placed. Total Rs 500."
+    answer, orders = server.ShopBrain(client=FakeGemini(script=lie)).chat("web", "chat-test-08", "yes")
+    assert orders == [] and answer.startswith("Sorry, I couldn't place the order")

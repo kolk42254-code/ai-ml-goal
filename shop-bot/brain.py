@@ -87,7 +87,7 @@ class ShopBrain:
             session["last_seen"] = database.now()
             session["turns"] += 1
             orders = self.new_orders.pop(key, [])
-        return answer or FALLBACK, orders
+        return honest_reply(answer, orders) or FALLBACK, orders
 
     def _session_for(self, key, platform, user_id, name):
         """Reuse the customer's chat, or start a new one if it is too old or too long."""
@@ -234,7 +234,7 @@ class OllamaBrain(ShopBrain):
             session["last_seen"] = database.now()
             session["turns"] += 1
             orders = self.new_orders.pop(key, [])
-        return clean_reply(answer) or FALLBACK, orders
+        return honest_reply(clean_reply(answer), orders) or FALLBACK, orders
 
     def _session_for(self, key, platform, user_id, name):
         now = database.now()
@@ -293,6 +293,27 @@ class OllamaBrain(ShopBrain):
                 self.use_tools = False
                 return self._ask(session, platform, user_id, name, extra)
             raise
+
+
+# Words a model uses when it says an order was placed. Small models sometimes say this without placing anything.
+ORDER_CLAIM = re.compile(
+    r"placed (?:your|the) order|order (?:is|has been|was) (?:placed|confirmed|booked)|(?:have|has|I've) placed"
+    r"|order (?:number|no\.?|id) (?:is|:)|order\s*#\s*\d+|\[[^\]]*order[^\]]*\]", re.IGNORECASE)
+PLACEHOLDER = re.compile(r"\[[^\]]*(?:order|number|total|amount)[^\]]*\]", re.IGNORECASE)
+
+
+def honest_reply(text, orders):
+    """Never let the model tell a customer an order was placed when Python didn't place one,
+    and fill in blanks like [Order Number] with the real number."""
+    if orders:
+        last = orders[-1]
+        return PLACEHOLDER.sub(f"#{last['id']}", text)
+    if ORDER_CLAIM.search(text or ""):
+        print(f"[brain] The model said an order was placed, but none was. Reply replaced: {text!r}")
+        shop = database.get_settings()
+        return ("Sorry, I couldn't place the order from this chat. Please tap Add on the items and order with the "
+                f"cart, or call the shop at {shop['phone']}.")
+    return text
 
 
 def clean_reply(text):
