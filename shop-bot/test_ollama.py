@@ -89,3 +89,15 @@ def test_shop_chat_uses_the_local_model_when_switched_on(monkeypatch):
     r = TestClient(server.app).post("/api/chat", json={"chat_id": "chat-test-05", "message": "hi"})
     assert r.status_code == 200 and r.json()["reply"] == "Namaste!"
     assert isinstance(server.brain, brain.OllamaBrain)
+
+
+def test_owner_can_see_which_model_answers(monkeypatch):
+    web = TestClient(server.app)
+    assert web.get("/api/owner/assistant").status_code == 401           # customers can't see it
+    monkeypatch.setattr(config, "OWNER_PASSWORD", "cake-secret-2026")
+    web.post("/api/owner/login", json={"password": "cake-secret-2026"})
+    monkeypatch.setattr(config, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(config, "OLLAMA_MODEL", "gemma4:e2b")
+    assert web.get("/api/owner/assistant").json() == {"assistant": "gemma4:e2b (Ollama, on this computer)"}
+    monkeypatch.setattr(config, "AI_PROVIDER", "gemini")
+    assert "Google Gemini" in web.get("/api/owner/assistant").json()["assistant"]

@@ -51,7 +51,7 @@ cd ~/shop-bot
 ```
 python -m pytest -q
 ```
-You should see `81 passed`. Then start the shop:
+You should see `82 passed`. Then start the shop:
 ```
 termux-wake-lock
 ```

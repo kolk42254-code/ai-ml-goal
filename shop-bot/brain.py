@@ -301,8 +301,15 @@ def clean_reply(text):
     return re.sub(r"^\s*#+\s*", "", text, flags=re.M).strip()
 
 
+def assistant_name():
+    """Which AI answers the chat, as set in .env, like "gemma4:e2b (Ollama, on this computer)"."""
+    if config.AI_PROVIDER == "ollama":
+        return f"{config.OLLAMA_MODEL} (Ollama, on this computer)"
+    return f"{config.GEMINI_MODEL} (Google Gemini)"
+
+
 def make_brain():
     """The assistant the shop uses: Gemini (default) or a local Ollama model (AI_PROVIDER=ollama in .env)."""
-    if config.AI_PROVIDER == "ollama":
-        return OllamaBrain()
-    return ShopBrain()
+    bot = OllamaBrain() if config.AI_PROVIDER == "ollama" else ShopBrain()
+    print(f"[brain] Chat answers come from: {assistant_name()}")
+    return bot

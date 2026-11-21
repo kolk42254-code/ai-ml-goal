@@ -515,3 +515,4 @@ fieldset.field legend { font-weight: 600; font-size: var(--step--1); color: var(
   background: var(--white);
 }
 .add-grid select { min-height: 44px; }
+.assistant-line { margin-top: 4px; color: var(--cocoa-soft); font-size: var(--step--1); }

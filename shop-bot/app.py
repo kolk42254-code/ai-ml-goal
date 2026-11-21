@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 import config
 import database
 import platforms
-from brain import ShopBrain, make_brain
+from brain import ShopBrain, assistant_name, make_brain
 
 STATIC_DIR = config.BASE_DIR / "static"
 config.UPLOADS_DIR.mkdir(exist_ok=True)
@@ -296,6 +296,12 @@ def owner_orders():
     at = database.now()
     return {"orders": database.list_orders(), "stats": database.order_stats(at),
             "server_now": at.isoformat(timespec="seconds")}
+
+
+@app.get("/api/owner/assistant", dependencies=owner_only)
+def owner_assistant():
+    """Which AI model answers the chat (shown on the owner desk, not to customers)."""
+    return {"assistant": assistant_name()}
 
 
 @app.get("/api/owner/orders/search", dependencies=owner_only)

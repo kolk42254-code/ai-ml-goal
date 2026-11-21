@@ -84,11 +84,21 @@
     $("sign-out").hidden = false;
     loadOrders();
     loadSettings();
+    loadAssistantName();
     clearInterval(state.pollTimer);
     state.pollTimer = setInterval(() => { if (!document.hidden) loadOrders(); }, 8000);
   }
 
-  // ---------------- tabs ----------------
+  /* Which AI answers the customers' chat (Gemini, or a model on this computer). */
+  async function loadAssistantName() {
+    try {
+      const { assistant } = await ownerApi("/api/owner/assistant");
+      $("assistant-line").textContent = `Chat assistant: ${assistant}`;
+      $("assistant-line").hidden = false;
+    } catch { /* not important enough to show an error */ }
+  }
+
+    // ---------------- tabs ----------------
 
   const tabs = ["orders", "items", "stock", "report", "shop"];
 
