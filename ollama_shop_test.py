@@ -15,6 +15,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
 MODEL = sys.argv[1] if len(sys.argv) > 1 else "qwen3.5:0.8b"
@@ -30,6 +31,12 @@ MENU:
 #1 Paneer Butter Masala (VEG) Rs 210
 #2 Chicken Curry (NON-VEG) Rs 240
 #3 Butter Roti (VEG) Rs 20"""
+
+# Your own instructions: edit shop_rules.txt (next to this script) and run the tests again.
+# If the file isn't there, the short rules above are used.
+RULES_FILE = Path(__file__).with_name("shop_rules.txt")
+if RULES_FILE.exists():
+    RULES = RULES_FILE.read_text(encoding="utf-8").strip()
 
 MENU_PRICES = {20, 210, 240}
 KANNADA_DIGITS = str.maketrans("೦೧೨೩೪೫೬೭೮೯", "0123456789")
@@ -122,7 +129,8 @@ def main():
             stream.reconfigure(encoding="utf-8", errors="replace")
         except (AttributeError, ValueError):
             pass
-    print(f"Testing model: {MODEL}\n")
+    print(f"Testing model: {MODEL}")
+    print(f"Instructions: {RULES_FILE.name if RULES_FILE.exists() else 'built-in short rules'}\n")
     passed = 0
     for number, (name, question, check) in enumerate(TESTS, 1):
         print(f"--- Test {number}: {name}")
