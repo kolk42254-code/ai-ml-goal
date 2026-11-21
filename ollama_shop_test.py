@@ -4,7 +4,8 @@ It sends 4 test questions with the shop's rules and menu, checks every answer by
 and prints PASS / FAIL with the time each answer took. Uses only Python's built-in modules.
 
 1. Start Ollama in one Termux session:      ollama serve
-2. In a second session (swipe from the left edge, NEW SESSION), run:
+   (On Windows, Ollama already runs in the background: skip this step.)
+2. In a second session (swipe from the left edge, NEW SESSION), or in PowerShell on Windows, run:
        python ollama_shop_test.py                      (tests qwen3.5:0.8b)
        python ollama_shop_test.py qwen3.5:4b           (tests another model)
 """
@@ -116,6 +117,11 @@ def ask(question):
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):   # Windows terminals: print Kannada instead of crashing on it
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     print(f"Testing model: {MODEL}\n")
     passed = 0
     for number, (name, question, check) in enumerate(TESTS, 1):
