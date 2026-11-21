@@ -56,7 +56,7 @@ Owner page ────► app.py (password needed) ──► database.py
 | `database.py` | Items, orders, offers and shop details, saved in `shop.db` (SQLite, built into Python). |
 | `brain.py` | The AI assistant. Gets the live menu every message and places real orders. |
 | `static/` | The two pages: HTML, CSS and JavaScript, plus the fonts. `motion.js` adds the shop page's greeting, animations and button effects; it never touches prices, the cart or orders. |
-| `test_shop.py`, `test_bot.py`, `test_features.py`, `test_ollama.py` | 90 automatic tests. No keys or internet needed. |
+| `test_shop.py`, `test_bot.py`, `test_features.py`, `test_ollama.py` | 91 automatic tests. No keys or internet needed. |
 | `try_in_terminal.py` | Chat with the assistant in the terminal. |
 | `platforms.py`, `connect_instagram.py`, `fake_whatsapp_message.py` | WhatsApp and Instagram (paused, see the end). |
 
@@ -70,7 +70,7 @@ Owner page ────► app.py (password needed) ──► database.py
    ```
    OWNER_PASSWORD=choose-a-long-password
    ```
-3. Run the tests. You should see `90 passed`:
+3. Run the tests. You should see `91 passed`:
    ```
    python -m pytest -q
    ```

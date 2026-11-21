@@ -184,3 +184,8 @@ def test_yes_in_other_languages():
         assert brain.said_yes(text), text
     for text in ("what is the price?", "no", "cancel"):
         assert not brain.said_yes(text), text
+
+
+def test_rules_ask_for_one_language_and_no_item_numbers():
+    rules = brain.ShopBrain(client=object())._instructions("web", "abc12345", "")
+    assert "ONE language only" in rules and "Never show the menu # numbers" in rules
