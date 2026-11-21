@@ -1,4 +1,6 @@
 """Tests for the local-model assistant (Ollama, like gemma4:e2b), with a pretend Ollama. No internet needed."""
+import json
+
 from fastapi.testclient import TestClient
 
 import app as server
@@ -133,3 +135,52 @@ def test_gemini_path_is_guarded_too():
     lie = lambda message, settings: "Order #7 is placed. Total Rs 500."
     answer, orders = server.ShopBrain(client=FakeGemini(script=lie)).chat("web", "chat-test-08", "yes")
     assert orders == [] and answer.startswith("Sorry, I couldn't place the order")
+
+
+def form_model(form, claim="Order placed successfully! Your order number is [Order Number]."):
+    """A model that never calls the tool, claims the order, and fills the order form when asked."""
+    def model(payload):
+        if "format" in payload:
+            return {"role": "assistant", "content": json.dumps(form)}
+        last = payload["messages"][-1]["content"]
+        return {"role": "assistant", "content": claim if last == "yes" else "2 Veg Puff, Rs 50. Shall I place it?"}
+    return model
+
+
+GOOD_FORM = {"confirmed": True, "customer_name": "Ravi", "items": [{"item_id": 9, "quantity": 2}],
+             "pickup_or_delivery": "pickup", "delivery_address": "", "wanted_at": "today 8 PM",
+             "phone": "9123456780", "notes": ""}
+
+
+def test_small_model_that_skips_the_tool_still_places_a_real_order():
+    fake = FakeOllama(form_model(GOOD_FORM))
+    bot = brain.OllamaBrain(post=fake)
+    bot.chat("web", "chat-test-09", "2 veg puffs, pickup 8 PM, Ravi, 9123456780")
+    answer, orders = bot.chat("web", "chat-test-09", "yes")
+    assert len(orders) == 1 and orders[0]["total"] == 50 and database.get_product(9)["stock"] == 28
+    assert answer == f"Your order #{orders[0]['id']} is placed: 2 x Veg Puff. Total Rs 50 (pickup at the shop). " \
+                     "You pay at pickup or delivery. You can follow it in My orders."
+    assert fake.calls[-1]["format"]["required"][0] == "confirmed"      # Ollama was asked for the strict form
+
+
+def test_order_form_problems_are_explained_not_faked():
+    no_phone = {**GOOD_FORM, "phone": ""}
+    answer, orders = brain.OllamaBrain(post=FakeOllama(form_model(no_phone))).chat("web", "chat-test-10", "yes")
+    assert orders == [] and answer.startswith("I couldn't place the order yet:") and "phone number" in answer
+    unconfirmed = {**GOOD_FORM, "confirmed": False}
+    answer, orders = brain.OllamaBrain(post=FakeOllama(form_model(unconfirmed))).chat("web", "chat-test-11", "yes")
+    assert orders == [] and answer.startswith("Sorry, I couldn't place the order")
+    assert database.list_orders() == []
+
+
+def test_no_order_form_without_the_customer_saying_yes():
+    fake = FakeOllama(form_model(GOOD_FORM, claim="Your order is placed!"))
+    answer, orders = brain.OllamaBrain(post=fake).chat("web", "chat-test-12", "what time do you close?")
+    assert orders == [] and not any("format" in call for call in fake.calls)
+
+
+def test_yes_in_other_languages():
+    for text in ("yes please", "OK", "haan", "ಹೌದು", "हाँ ठीक है", "sari, place it"):
+        assert brain.said_yes(text), text
+    for text in ("what is the price?", "no", "cancel"):
+        assert not brain.said_yes(text), text

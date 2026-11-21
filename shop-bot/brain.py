@@ -228,6 +228,8 @@ class OllamaBrain(ShopBrain):
                 print(f"[brain] Ollama error for {key}: {error}")
                 session["history"].pop()
                 answer = ""
+            if answer and not self.new_orders.get(key) and ORDER_CLAIM.search(answer) and said_yes(text):
+                answer = self._place_from_form(session, platform, user_id, name, key) or answer
             if answer:
                 session["history"].append({"role": "assistant", "content": answer})
             session["history"] = session["history"][-20:]     # keep it quick on a small computer
@@ -259,6 +261,50 @@ class OllamaBrain(ShopBrain):
                 extra.append({"role": "tool", "tool_name": function.get("name", ""),
                               "content": self._run_tool(tool, function)})
         return ""
+
+    def _place_from_form(self, session, platform, user_id, name, key):
+        """The model said "order placed" after the customer said yes, but didn't call place_order (small models
+        often don't). Ask it to fill in a strict order form instead, and let Python place and check the order.
+        Returns the reply for the customer, or "" if no order could be read from the chat."""
+        system = (self._instructions(platform, user_id, name) + "\n\nNow read the whole conversation and fill in the "
+                  "order form for the order the customer just confirmed. Use the menu # numbers as item_id. "
+                  "Set confirmed to false if the customer did not clearly confirm an order. Use empty text for "
+                  "anything the customer didn't say.")
+        payload = {"model": self.model, "stream": False, "format": ORDER_FORM, "options": {"temperature": 0},
+                   "messages": [{"role": "system", "content": system}, *session["history"]]}
+        if self.use_think:
+            payload["think"] = False
+        try:
+            form = json.loads(self.post(self.url, payload)["message"]["content"])
+        except Exception as error:                            # unreadable form: fall back to the honest message
+            print(f"[brain] Couldn't read the order form: {error}")
+            return ""
+        if not isinstance(form, dict) or form.get("confirmed") is not True:
+            return ""
+        pairs = []
+        for line in form.get("items") or []:
+            try:
+                pairs.append(f"{int(line['item_id'])}:{int(line['quantity'])}")
+            except (KeyError, TypeError, ValueError):
+                continue
+        if not pairs:
+            return ""
+        tool = self.make_place_order(platform, user_id)
+        result = tool(customer_name=str(form.get("customer_name") or ""), items=", ".join(pairs),
+                      pickup_or_delivery=str(form.get("pickup_or_delivery") or ""),
+                      delivery_address=str(form.get("delivery_address") or ""),
+                      wanted_at=str(form.get("wanted_at") or ""), phone=str(form.get("phone") or ""),
+                      notes=str(form.get("notes") or ""))
+        placed = self.new_orders.get(key) or []
+        if not placed:                                        # Python refused it: say exactly why
+            problem = result.removeprefix("Order NOT placed:").split(" Explain this")[0].strip()
+            return f"I couldn't place the order yet: {problem}"
+        order = placed[-1]
+        lines = ", ".join(f"{line['quantity']} x {line['name']}" for line in order["items"])
+        how = ("pickup at the shop" if order["fulfilment"] == "pickup"
+               else f"delivery fee Rs {database.rupees(order['delivery_fee'])}" if order["delivery_fee"] else "free delivery")
+        return (f"Your order #{order['id']} is placed: {lines}. Total Rs {database.rupees(order['total'])} ({how}). "
+                "You pay at pickup or delivery. You can follow it in My orders.")
 
     def _run_tool(self, tool, function):
         if function.get("name") != "place_order":
@@ -293,6 +339,28 @@ class OllamaBrain(ShopBrain):
                 self.use_tools = False
                 return self._ask(session, platform, user_id, name, extra)
             raise
+
+
+# The order form a small model fills in when it won't call place_order by itself (Ollama keeps it to this shape).
+ORDER_FORM = {"type": "object", "required": ["confirmed", "customer_name", "items", "pickup_or_delivery",
+                                              "delivery_address", "wanted_at", "phone", "notes"],
+              "properties": {
+                  "confirmed": {"type": "boolean"},
+                  "customer_name": {"type": "string"},
+                  "items": {"type": "array", "items": {"type": "object", "required": ["item_id", "quantity"],
+                                                       "properties": {"item_id": {"type": "integer"},
+                                                                      "quantity": {"type": "integer"}}}},
+                  "pickup_or_delivery": {"type": "string", "enum": ["pickup", "delivery"]},
+                  "delivery_address": {"type": "string"}, "wanted_at": {"type": "string"},
+                  "phone": {"type": "string"}, "notes": {"type": "string"}}}
+
+YES = re.compile(r"\b(yes|yeah|yep|yup|ok|okay|sure|confirm(ed)?|place (it|the order)|go ahead|done|haan|han|ha|ji|"
+                 r"theek|thik|correct|right)\b|ಹೌದು|ಸರಿ|ಆಗಲಿ|हाँ|हां|ठीक|சரி|ஆம்|అవును|సరే", re.IGNORECASE)
+
+
+def said_yes(text):
+    """Did the customer's message confirm (yes, ok, haan, ಹೌದು, सरी...)?"""
+    return bool(YES.search(text or ""))
 
 
 # Words a model uses when it says an order was placed. Small models sometimes say this without placing anything.
