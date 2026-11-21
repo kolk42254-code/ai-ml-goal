@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 import config
 import database
 import platforms
-from brain import ShopBrain
+from brain import ShopBrain, make_brain
 
 STATIC_DIR = config.BASE_DIR / "static"
 config.UPLOADS_DIR.mkdir(exist_ok=True)
@@ -60,7 +60,7 @@ def get_brain():
     global brain
     with brain_lock:
         if brain is None:
-            brain = ShopBrain()
+            brain = make_brain()
         return brain
 
 

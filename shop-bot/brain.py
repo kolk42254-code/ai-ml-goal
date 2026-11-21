@@ -1,7 +1,10 @@
 """The AI assistant. It answers customers using the LIVE menu from the shop database,
 remembers each chat, and places real orders through Python (which checks stock and totals)."""
+import json
 import re
 import threading
+import urllib.error
+import urllib.request
 from datetime import timedelta
 
 from google import genai
@@ -99,6 +102,11 @@ class ShopBrain:
         return session
 
     def _settings(self, platform, user_id, name):
+        """Gemini's settings: the instructions plus the place_order tool."""
+        return types.GenerateContentConfig(system_instruction=self._instructions(platform, user_id, name),
+                                           tools=[self.make_place_order(platform, user_id)])
+
+    def _instructions(self, platform, user_id, name):
         """The AI's instructions with the live shop details, time, open/closed status and menu."""
         shop = database.get_settings()
         at = database.now()
@@ -113,8 +121,7 @@ class ShopBrain:
             shop_name=shop["shop_name"], details=database.shop_details_text(shop),
             now=f"{at:%A %d %B %Y}, {database.clock(at.time())}", status=database.shop_status(shop, at)["text"],
             menu=database.menu_text(at), about=about)
-        return types.GenerateContentConfig(system_instruction=instructions,
-                                           tools=[self.make_place_order(platform, user_id)])
+        return instructions
 
     def make_place_order(self, platform, user_id):
         """Build the place_order tool for one customer (it remembers their platform and ID)."""
@@ -160,3 +167,142 @@ class ShopBrain:
     def _lock_for(self, key):
         with self.locks_guard:
             return self.locks.setdefault(key, threading.Lock())
+
+
+# ===================== A local model through Ollama (for testing on your own computer) =====================
+
+NO_TOOLS_NOTE = ("\n\nIMPORTANT: you can't place orders in this chat. When a customer wants to order, tell them to tap "
+                 "Add on the items and use the cart, or to call the shop.")
+PLACE_ORDER_TOOL = {"type": "function", "function": {
+    "name": "place_order",
+    "description": "Place a confirmed order. Call this only after the customer said yes to the order summary.",
+    "parameters": {"type": "object", "required": ["customer_name", "items", "pickup_or_delivery", "delivery_address",
+                                                   "wanted_at", "phone", "notes"],
+                   "properties": {
+                       "customer_name": {"type": "string", "description": "The customer's name."},
+                       "items": {"type": "string",
+                                 "description": 'Item IDs from the menu with quantities, like "3:1, 9:6".'},
+                       "pickup_or_delivery": {"type": "string", "enum": ["pickup", "delivery"]},
+                       "delivery_address": {"type": "string", "description": "Full address, or empty for pickup."},
+                       "wanted_at": {"type": "string", "description": "When the customer wants it, like today 8 PM."},
+                       "phone": {"type": "string", "description": "Phone number, or empty if already known."},
+                       "notes": {"type": "string", "description": "Extra requests like less spicy, or empty."}}}}}
+
+
+def _ollama_post(url, payload, timeout=180):
+    request = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read())
+    except urllib.error.HTTPError as error:
+        raise OllamaError(error.read().decode(errors="replace")) from None
+
+
+class OllamaError(Exception):
+    pass
+
+
+class OllamaBrain(ShopBrain):
+    """The same assistant, answered by a model running on this computer with Ollama (like gemma4:e2b).
+    Prices, stock and totals still come from Python. If the model can't use tools, it answers questions
+    and sends customers to the cart instead of placing orders."""
+
+    def __init__(self, post=None, model=None, url=None):
+        self.post = post or _ollama_post
+        self.model = model or config.OLLAMA_MODEL
+        self.url = (url or config.OLLAMA_URL).rstrip("/") + "/api/chat"
+        self.use_tools = True
+        self.use_think = True
+        self.sessions, self.locks, self.new_orders = {}, {}, {}
+        self.locks_guard = threading.Lock()
+
+    def chat(self, platform, user_id, text, name=""):
+        key = f"{platform}:{user_id}"
+        with self._lock_for(key):
+            self.new_orders[key] = []
+            session = self._session_for(key, platform, user_id, name)
+            session["history"].append({"role": "user", "content": text})
+            try:
+                answer = self._answer(session, platform, user_id, name)
+            except Exception as error:                    # Ollama closed, model not downloaded, too slow...
+                print(f"[brain] Ollama error for {key}: {error}")
+                session["history"].pop()
+                answer = ""
+            if answer:
+                session["history"].append({"role": "assistant", "content": answer})
+            session["history"] = session["history"][-20:]     # keep it quick on a small computer
+            session["last_seen"] = database.now()
+            session["turns"] += 1
+            orders = self.new_orders.pop(key, [])
+        return clean_reply(answer) or FALLBACK, orders
+
+    def _session_for(self, key, platform, user_id, name):
+        now = database.now()
+        session = self.sessions.get(key)
+        if session is None or now - session["last_seen"] > FORGET_AFTER or session["turns"] >= MAX_TURNS:
+            self.sessions = {k: s for k, s in self.sessions.items() if now - s["last_seen"] <= FORGET_AFTER}
+            session = {"history": [], "last_seen": now, "turns": 0}
+            self.sessions[key] = session
+        return session
+
+    def _answer(self, session, platform, user_id, name):
+        tool = self.make_place_order(platform, user_id)
+        extra = []                                            # tool calls and results within this one answer
+        for _ in range(4):                                    # at most a few tool rounds, then a plain answer
+            message = self._ask(session, platform, user_id, name, extra)
+            calls = message.get("tool_calls") or []
+            if not calls:
+                return (message.get("content") or "").strip()
+            extra.append({"role": "assistant", "content": message.get("content") or "", "tool_calls": calls})
+            for call in calls:
+                function = call.get("function", {})
+                extra.append({"role": "tool", "tool_name": function.get("name", ""),
+                              "content": self._run_tool(tool, function)})
+        return ""
+
+    def _run_tool(self, tool, function):
+        if function.get("name") != "place_order":
+            return f"Unknown tool {function.get('name')!r}. Only place_order exists."
+        arguments = function.get("arguments") or {}
+        if isinstance(arguments, str):
+            try:
+                arguments = json.loads(arguments)
+            except ValueError:
+                arguments = {}
+        names = PLACE_ORDER_TOOL["function"]["parameters"]["required"]
+        values = {k: str(arguments.get(k) or "") for k in names}
+        return tool(**values)
+
+    def _ask(self, session, platform, user_id, name, extra):
+        system = self._instructions(platform, user_id, name) + ("" if self.use_tools else NO_TOOLS_NOTE)
+        payload = {"model": self.model, "stream": False, "options": {"temperature": 0.3},
+                   "messages": [{"role": "system", "content": system}, *session["history"], *extra]}
+        if self.use_tools:
+            payload["tools"] = [PLACE_ORDER_TOOL]
+        if self.use_think:
+            payload["think"] = False
+        try:
+            return self.post(self.url, payload)["message"]
+        except OllamaError as error:
+            problem = str(error).lower()
+            if self.use_think and "think" in problem:         # this model has no thinking mode
+                self.use_think = False
+                return self._ask(session, platform, user_id, name, extra)
+            if self.use_tools and "tool" in problem:          # this model can't call tools: answer without them
+                print(f"[brain] {self.model} can't place orders by chat (no tool support). Customers use the cart.")
+                self.use_tools = False
+                return self._ask(session, platform, user_id, name, extra)
+            raise
+
+
+def clean_reply(text):
+    """Small models often add markdown stars and headings even when told not to."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text or "")
+    return re.sub(r"^\s*#+\s*", "", text, flags=re.M).strip()
+
+
+def make_brain():
+    """The assistant the shop uses: Gemini (default) or a local Ollama model (AI_PROVIDER=ollama in .env)."""
+    if config.AI_PROVIDER == "ollama":
+        return OllamaBrain()
+    return ShopBrain()

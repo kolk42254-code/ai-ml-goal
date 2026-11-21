@@ -56,7 +56,7 @@ Owner page ────► app.py (password needed) ──► database.py
 | `database.py` | Items, orders, offers and shop details, saved in `shop.db` (SQLite, built into Python). |
 | `brain.py` | The AI assistant. Gets the live menu every message and places real orders. |
 | `static/` | The two pages: HTML, CSS and JavaScript, plus the fonts. `motion.js` adds the shop page's greeting, animations and button effects; it never touches prices, the cart or orders. |
-| `test_shop.py`, `test_bot.py`, `test_features.py` | 74 automatic tests. No keys or internet needed. |
+| `test_shop.py`, `test_bot.py`, `test_features.py`, `test_ollama.py` | 81 automatic tests. No keys or internet needed. |
 | `try_in_terminal.py` | Chat with the assistant in the terminal. |
 | `platforms.py`, `connect_instagram.py`, `fake_whatsapp_message.py` | WhatsApp and Instagram (paused, see the end). |
 
@@ -70,7 +70,7 @@ Owner page ────► app.py (password needed) ──► database.py
    ```
    OWNER_PASSWORD=choose-a-long-password
    ```
-3. Run the tests. You should see `74 passed`:
+3. Run the tests. You should see `81 passed`:
    ```
    python -m pytest -q
    ```
@@ -85,6 +85,20 @@ The first start creates `shop.db` with 12 sample items and one sample offer. To 
 **Already have a `shop.db` from an older version?** It's upgraded by itself on the next start. Orders, items and shop details are kept. (Copy `shop.db` somewhere safe first anyway.)
 
 **Show it on your phone:** keep the server running and run `ngrok http 8000` in a second terminal. Open your ngrok address on the phone. Add `/owner` for the owner desk.
+
+## Test with a free AI model on your own computer (Ollama)
+
+Instead of Gemini, the chat can use a model running on your computer with [Ollama](https://ollama.com), like `gemma4:e2b`. No Google key and no cost, but your computer must stay on with Ollama running, so use it for testing, not for a real shop.
+
+1. Download the model once: `ollama pull gemma4:e2b`
+2. Add these lines to `.env`:
+   ```
+   AI_PROVIDER=ollama
+   OLLAMA_MODEL=gemma4:e2b
+   ```
+3. Start the shop as usual. Prices, stock and totals still come from Python. If the model can't place orders (no tool support), it answers questions and sends customers to the cart.
+
+To go back to Gemini, change it to `AI_PROVIDER=gemini` and restart.
 
 ## Make it a real shop's website
 

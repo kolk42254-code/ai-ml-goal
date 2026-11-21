@@ -1,9 +1,9 @@
-"""Chat with the shop bot right here in your terminal. Only GEMINI_API_KEY is needed in .env.
+"""Chat with the shop bot right here in your terminal. Uses Gemini (GEMINI_API_KEY in .env), or Ollama with AI_PROVIDER=ollama.
 Run:  python try_in_terminal.py"""
-from brain import ShopBrain
+from brain import make_brain
 
 try:
-    bot = ShopBrain()
+    bot = make_brain()
 except RuntimeError as error:
     raise SystemExit(error)
 

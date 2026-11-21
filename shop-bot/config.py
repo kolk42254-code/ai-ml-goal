@@ -11,6 +11,9 @@ load_dotenv(BASE_DIR / ".env")          # copies the values in .env into the env
 # ---- AI (Google Gemini) ----
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()   # "gemini", or "ollama" for a model on this computer
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e2b")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 
 # ---- Website ----
 OWNER_PASSWORD = os.getenv("OWNER_PASSWORD", "")             # password for the owner page (/owner)
